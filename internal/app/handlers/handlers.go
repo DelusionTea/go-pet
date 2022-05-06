@@ -1,31 +1,88 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
+	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
+	"net/http"
 )
 
-type Handler struct {
+type MarketInterface interface {
+	UpdateStatus(status string, ctx context.Context)
+	Register(login string, pass string, ctx context.Context) error
+	UploadOrder(status string, ctx context.Context)
+	GetOrder(status string, ctx context.Context)
+	GetBalance(status string, ctx context.Context)
+	Withdraw(status string, ctx context.Context)
+	GetWithdraws(status string, ctx context.Context)
+}
+type register struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
-func New() *Handler {
-	return &Handler{}
+type Handler struct {
+	repo MarketInterface
+	wp   workers.Workers
+}
+
+func New(repo MarketInterface, wp *workers.Workers) *Handler {
+	return &Handler{
+		repo: repo,
+		wp:   *wp,
+	}
 }
 
 func (h *Handler) HandlerRegister(c *gin.Context) {
-	//Формат запроса:
-	//POST /api/user/register HTTP/1.1
-	//Content-Type: application/json
-	//...
+	value := register{}
+	defer c.Request.Body.Close()
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+
+	if err := json.Unmarshal([]byte(body), &value); err != nil {
+		panic(err)
+	}
+
+	if err != nil {
+		panic(err)
+		return
+	}
+	if (value.Login == "") || (value.Password == "") {
+		c.IndentedJSON(http.StatusBadRequest, "Error")
+		return
+	}
+	err = h.repo.Register(value.Login, value.Password, c)
+	if err != nil {
+		//var ue *DBError
+		//if errors.As(err, &ue) && ue.Title == "UniqConstraint" {
+		//	result["result"] = h.baseURL + shortURL
+		//	c.IndentedJSON(http.StatusConflict, result)
+		//	return
+		//}
+		//c.IndentedJSON(http.StatusInternalServerError, err)
+		c.IndentedJSON(http.StatusConflict, "Status Conflict")
+		return
+	}
+	//Добавить в базу
+	//Если имя занято вернуть ошибку
+	//При проблемах добавления - тоже бросить ошибку
 	//
-	//{
-	//	"login": "<login>",
-	//	"password": "<password>"
+	//shortURL := shorter.Shorter(url.URL)
+	//err = h.repo.AddURL(c.Request.Context(), url.URL, shortURL, c.GetString("userId"))
+	//if err != nil {
+	//	var ue *DBError
+	//	if errors.As(err, &ue) && ue.Title == "UniqConstraint" {
+	//		result["result"] = h.baseURL + shortURL
+	//		c.IndentedJSON(http.StatusConflict, result)
+	//		return
+	//	}
+	//	c.IndentedJSON(http.StatusInternalServerError, err)
+	//	return
 	//}
-	//Возможные коды ответа:
-	//200 — пользователь успешно зарегистрирован и аутентифицирован;
-	//400 — неверный формат запроса;
-	//409 — логин уже занят;
-	//500 — внутренняя ошибка сервера.
+	//result["result"] = h.baseURL + shortURL
+	c.IndentedJSON(http.StatusCreated, "Success Register")
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	//POST /api/user/login HTTP/1.1

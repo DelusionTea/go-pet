@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"github.com/DelusionTea/go-pet.git/cmd/conf"
 	"github.com/DelusionTea/go-pet.git/internal/app/handlers"
 	"github.com/DelusionTea/go-pet.git/internal/app/middleware"
+	"github.com/DelusionTea/go-pet.git/internal/database"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -13,7 +15,7 @@ import (
 	"os/signal"
 )
 
-func setupRouter() *gin.Engine {
+func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
 	router := gin.Default()
 	//router.
@@ -21,7 +23,7 @@ func setupRouter() *gin.Engine {
 	router.Use(middleware.GzipDecodeMiddleware())
 	//router.Use(middleware.CookieMiddleware(conf))
 	//router.Use(gzip.Gzip(gzip.DefaultCompression))
-	handler := handlers.New()
+	handler := handlers.New(repo, wp)
 	router.POST("/api/user/register", handler.HandlerRegister)
 	router.POST("/api/user/login", handler.HandlerLogin)
 	router.POST("/api/user/orders", handler.HandlerPostOrders)
@@ -54,14 +56,14 @@ func main() {
 		wp.Run(ctx)
 	}()
 	//if cfg.DataBase != "" {
-	//	//handler = setupRouter(DataBase.NewDatabase(cfg.BaseURL, cfg.DataBase))
-	//	db, err := sql.Open("postgres", cfg.DataBase)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	defer db.Close()
-	//	database.SetUpDataBase(db, ctx)
-	//	handler = setupRouter(database.NewDatabaseRepository(cfg.BaseURL, db), cfg, wp)
+	//handler = setupRouter(DataBase.NewDatabase(cfg.BaseURL, cfg.DataBase))
+	db, err := sql.Open("postgres", cfg.DataBase)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	database.SetUpDataBase(db, ctx)
+	handler = setupRouter(database.NewDatabase(db), cfg, wp)
 	//	//handler = setupRouter(memory.NewMemoryFile(cfg.FilePath, cfg.BaseURL), cfg.BaseURL, cfg)
 	//} else {
 	//	handler = setupRouter(memory.NewMemoryFile(ctx, cfg.FilePath, cfg.BaseURL), cfg, wp)

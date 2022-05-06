@@ -4,9 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/DelusionTea/go-pet.git/internal/app/handlers"
+	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
 	"log"
+	"time"
 )
+
+func NewDatabaseRepository(baseURL string, db *sql.DB) handlers.MarketInterface {
+	return handlers.MarketInterface(NewDatabase(db))
+}
 
 func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 
@@ -20,28 +27,83 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 		}
 		log.Println("Create EXTENSION")
 	}
-	sqlCreateDB := `CREATE TABLE IF NOT EXISTS urls (
+	sqlCreateUsersDB := `CREATE TABLE IF NOT EXISTS users (
 								id serial PRIMARY KEY,
 								user_id uuid DEFAULT uuid_generate_v4 (), 	
-								origin_url VARCHAR NOT NULL, 
-								short_url VARCHAR NOT NULL UNIQUE,
+								login VARCHAR NOT NULL UNIQUE, 
+								password VARCHAR NOT NULL UNIQUE,
 								is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 					);`
-	res, err := db.ExecContext(ctx, sqlCreateDB)
-	log.Println("Create table", err, res)
+	res1, err := db.ExecContext(ctx, sqlCreateUsersDB)
+	sqlCreateOrdersDB := `CREATE TABLE IF NOT EXISTS orders (
+								id serial PRIMARY KEY,
+								order_id uuid DEFAULT uuid_generate_v4 (), 	
+								status VARCHAR NOT NULL DEFAULT "NEW", 
+								accurual VARCHAR,
+								uploaded_at DATE NOT NULL
+					);`
+	res2, err := db.ExecContext(ctx, sqlCreateOrdersDB)
+	//sqlCreateDB := `CREATE TABLE IF NOT EXISTS urls (
+	//							id serial PRIMARY KEY,
+	//							user_id uuid DEFAULT uuid_generate_v4 (),
+	//							origin_url VARCHAR NOT NULL,
+	//							short_url VARCHAR NOT NULL UNIQUE,
+	//							is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+	//				);`
+	//res, err := db.ExecContext(ctx, sqlCreateDB)
+	log.Println("Create table", err, res1, res2)
 	return nil
 }
 
 type PGDataBase struct {
-	conn       *sql.DB
-	baseURL    string
-	DeleteFlag bool `json:"delete_flag"`
+	conn *sql.DB
 }
 
-func NewDatabase(baseURL string, db *sql.DB) *PGDataBase {
+type OrderInfo struct {
+	Order      string    `json:"order"`
+	Status     string    `json:"status"`
+	Accrual    int       `json:"accrual"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+func (db *PGDataBase) UpdateStatus(status string, ctx context.Context) {
+	return
+}
+func (db *PGDataBase) Register(login string, pass string, ctx context.Context) error {
+	sqlAddUser := `INSERT INTO users (login, password)
+				  VALUES ($1, $2)`
+
+	_, err := db.conn.ExecContext(ctx, sqlAddUser, login, pass)
+
+	if err, ok := err.(*pq.Error); ok {
+		if err.Code == pgerrcode.UniqueViolation {
+			return err //"StatusConflict"
+			//ctx.IndentedJSON(http.StatusConflict)
+		}
+		log.Println(err)
+	}
+
+	return err
+}
+func (db *PGDataBase) UploadOrder(status string, ctx context.Context) {
+	return
+}
+func (db *PGDataBase) GetOrder(status string, ctx context.Context) {
+	return
+}
+func (db *PGDataBase) GetBalance(status string, ctx context.Context) {
+	return
+}
+func (db *PGDataBase) Withdraw(status string, ctx context.Context) {
+	return
+}
+func (db *PGDataBase) GetWithdraws(status string, ctx context.Context) {
+	return
+}
+
+func NewDatabase(db *sql.DB) *PGDataBase {
 	result := &PGDataBase{
-		conn:    db,
-		baseURL: baseURL,
+		conn: db,
 	}
 	return result
 }
