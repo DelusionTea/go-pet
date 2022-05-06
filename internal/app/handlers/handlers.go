@@ -56,6 +56,7 @@ func New(repo MarketInterface, wp *workers.Workers) *Handler {
 }
 
 func (h *Handler) HandlerRegister(c *gin.Context) {
+	log.Println("Register Start")
 	value := user{}
 	defer c.Request.Body.Close()
 
@@ -64,7 +65,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 	}
-
+	log.Println(value.Login, value.Password)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		return
@@ -83,42 +84,12 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		c.IndentedJSON(http.StatusInternalServerError, err)
 		return
 	}
-	//Добавить в базу
-	//Если имя занято вернуть ошибку
-	//При проблемах добавления - тоже бросить ошибку
-	//
-	//shortURL := shorter.Shorter(url.URL)
-	//err = h.repo.AddURL(c.Request.Context(), url.URL, shortURL, c.GetString("userId"))
-	//if err != nil {
-	//	var ue *DBError
-	//	if errors.As(err, &ue) && ue.Title == "UniqConstraint" {
-	//		result["result"] = h.baseURL + shortURL
-	//		c.IndentedJSON(http.StatusConflict, result)
-	//		return
-	//	}
-	//	c.IndentedJSON(http.StatusInternalServerError, err)
-	//	return
-	//}
-	//result["result"] = h.baseURL + shortURL
 	c.IndentedJSON(http.StatusOK, "Success Register")
 	h.HandlerLogin(c)
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
+	log.Println("Login Start")
 	var results string
-	//POST /api/user/login HTTP/1.1
-	//Content-Type: application/json
-	//...
-	//
-	//{
-	//	"login": "<login>",
-	//	"password": "<password>"
-	//}
-	//Возможные коды ответа:
-	//200 — пользователь успешно аутентифицирован;
-	//400 — неверный формат запроса;
-	//401 — неверная пара логин/пароль;
-	//500 — внутренняя ошибка сервера.
-
 	value := user{}
 	defer c.Request.Body.Close()
 
@@ -127,7 +98,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 	}
-
+	log.Println(value.Login, value.Password)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		return
