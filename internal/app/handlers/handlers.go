@@ -62,11 +62,11 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	body, err := ioutil.ReadAll(c.Request.Body)
 
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
-		panic(err)
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 	}
 
 	if err != nil {
-		panic(err)
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		return
 	}
 	if (value.Login == "") || (value.Password == "") {
@@ -125,7 +125,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	body, err := ioutil.ReadAll(c.Request.Body)
 
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
-		panic(err)
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 	}
 
 	if err != nil {

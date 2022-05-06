@@ -56,13 +56,14 @@ func main() {
 		wp.Run(ctx)
 	}()
 	//if cfg.DataBase != "" {
-	//handler = setupRouter(DataBase.NewDatabase(cfg.BaseURL, cfg.DataBase))
+
 	db, err := sql.Open("postgres", cfg.DataBase)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 	database.SetUpDataBase(db, ctx)
+	log.Println(database.NewDatabaseRepository(db))
 	handler = setupRouter(database.NewDatabase(db), cfg, wp)
 	//	//handler = setupRouter(memory.NewMemoryFile(cfg.FilePath, cfg.BaseURL), cfg.BaseURL, cfg)
 	//} else {

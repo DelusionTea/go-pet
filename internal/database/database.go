@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func NewDatabaseRepository(baseURL string, db *sql.DB) handlers.MarketInterface {
+func NewDatabaseRepository(db *sql.DB) handlers.MarketInterface {
 	return handlers.MarketInterface(NewDatabase(db))
 }
 
@@ -35,7 +35,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								password VARCHAR NOT NULL UNIQUE,
 								is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 					);`
-	res1, err := db.ExecContext(ctx, sqlCreateUsersDB)
+	res1, err1 := db.ExecContext(ctx, sqlCreateUsersDB)
 	sqlCreateOrdersDB := `CREATE TABLE IF NOT EXISTS orders (
 								id serial PRIMARY KEY,
 								order_id uuid DEFAULT uuid_generate_v4 (), 	
@@ -43,7 +43,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								accurual VARCHAR,
 								uploaded_at DATE NOT NULL
 					);`
-	res2, err := db.ExecContext(ctx, sqlCreateOrdersDB)
+	res2, err2 := db.ExecContext(ctx, sqlCreateOrdersDB)
 	//sqlCreateDB := `CREATE TABLE IF NOT EXISTS urls (
 	//							id serial PRIMARY KEY,
 	//							user_id uuid DEFAULT uuid_generate_v4 (),
@@ -52,7 +52,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	//							is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 	//				);`
 	//res, err := db.ExecContext(ctx, sqlCreateDB)
-	log.Println("Create table", err, res1, res2)
+	log.Println("Create table", err1, res1, err2, res2)
 	return nil
 }
 
