@@ -3,22 +3,42 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
+
+type DBError struct {
+	Err   error
+	Title string
+}
+
+func (err *DBError) Error() string {
+	return fmt.Sprintf("%v", err.Err)
+}
+
+func NewErrorWithDB(err error, title string) error {
+	return &DBError{
+		Err:   err,
+		Title: title,
+	}
+}
 
 type MarketInterface interface {
 	UpdateStatus(status string, ctx context.Context)
 	Register(login string, pass string, ctx context.Context) error
+	Login(login string, pass string, ctx context.Context) (string, error)
 	UploadOrder(status string, ctx context.Context)
 	GetOrder(status string, ctx context.Context)
 	GetBalance(status string, ctx context.Context)
 	Withdraw(status string, ctx context.Context)
 	GetWithdraws(status string, ctx context.Context)
 }
-type register struct {
+type user struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
@@ -36,7 +56,7 @@ func New(repo MarketInterface, wp *workers.Workers) *Handler {
 }
 
 func (h *Handler) HandlerRegister(c *gin.Context) {
-	value := register{}
+	value := user{}
 	defer c.Request.Body.Close()
 
 	body, err := ioutil.ReadAll(c.Request.Body)
@@ -55,14 +75,12 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	}
 	err = h.repo.Register(value.Login, value.Password, c)
 	if err != nil {
-		//var ue *DBError
-		//if errors.As(err, &ue) && ue.Title == "UniqConstraint" {
-		//	result["result"] = h.baseURL + shortURL
-		//	c.IndentedJSON(http.StatusConflict, result)
-		//	return
-		//}
-		//c.IndentedJSON(http.StatusInternalServerError, err)
-		c.IndentedJSON(http.StatusConflict, "Status Conflict")
+		var ue *DBError
+		if errors.As(err, &ue) && ue.Title == "Conflict" {
+			c.IndentedJSON(http.StatusConflict, "Status Conflict")
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, err)
 		return
 	}
 	//Добавить в базу
@@ -82,9 +100,11 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	//	return
 	//}
 	//result["result"] = h.baseURL + shortURL
-	c.IndentedJSON(http.StatusCreated, "Success Register")
+	c.IndentedJSON(http.StatusOK, "Success Register")
+	h.HandlerLogin(c)
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
+	var results string
 	//POST /api/user/login HTTP/1.1
 	//Content-Type: application/json
 	//...
@@ -98,6 +118,40 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	//400 — неверный формат запроса;
 	//401 — неверная пара логин/пароль;
 	//500 — внутренняя ошибка сервера.
+
+	value := user{}
+	defer c.Request.Body.Close()
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+
+	if err := json.Unmarshal([]byte(body), &value); err != nil {
+		panic(err)
+	}
+
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		return
+	}
+	if (value.Login == "") || (value.Password == "") {
+		c.IndentedJSON(http.StatusBadRequest, "Error")
+		return
+	}
+	results, err = h.repo.Login(value.Login, value.Password, c)
+	log.Println(results)
+	if err != nil {
+		var ue *DBError
+		//if errors.As(err, &ue) && ue.Title == "user not found" {
+		//	c.IndentedJSON(http.StatusConflict, "Status Conflict")
+		//	return
+		//}
+		if errors.As(err, &ue) && (ue.Title == "wrong password" || ue.Title == "user not found") {
+			c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, "Success Login")
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {

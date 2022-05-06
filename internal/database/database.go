@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/DelusionTea/go-pet.git/internal/app/handlers"
 	"github.com/jackc/pgerrcode"
@@ -65,9 +66,27 @@ type OrderInfo struct {
 	Accrual    int       `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
+type GetUserData struct {
+	login    string
+	password string
+}
 
 func (db *PGDataBase) UpdateStatus(status string, ctx context.Context) {
 	return
+}
+func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (string, error) {
+	sqlGetUser := `SELECT login,password FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
+	query := db.conn.QueryRowContext(ctx, sqlGetUser, login)
+	result := GetUserData{}
+	query.Scan(&result.login, &result.password)
+	if result.login == "" {
+		return "", handlers.NewErrorWithDB(errors.New("not found"), "user not found")
+	}
+	if result.password != pass {
+		return "", handlers.NewErrorWithDB(errors.New("wrong password"), "wrong password")
+	}
+	return "Login success", nil
+
 }
 func (db *PGDataBase) Register(login string, pass string, ctx context.Context) error {
 	sqlAddUser := `INSERT INTO users (login, password)
@@ -77,9 +96,12 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 
 	if err, ok := err.(*pq.Error); ok {
 		if err.Code == pgerrcode.UniqueViolation {
-			return err //"StatusConflict"
-			//ctx.IndentedJSON(http.StatusConflict)
+			return handlers.NewErrorWithDB(err, "Conflict")
 		}
+		//if err.Code == pgerrcode.UniqueViolation {
+		//	return err //"StatusConflict"
+		//	//ctx.IndentedJSON(http.StatusConflict)
+		//}
 		log.Println(err)
 	}
 
@@ -116,11 +138,6 @@ func (db *PGDataBase) Ping(ctx context.Context) error {
 		return err
 	}
 	return nil
-}
-
-type GetURLdata struct {
-	OriginURL string
-	IsDeleted bool
 }
 
 //func NewDatabaseRepository(baseURL string, db *sql.DB) handlers.ShorterInterface {
@@ -223,41 +240,41 @@ type GetURLdata struct {
 //	return result, nil
 //}
 
-func (db *PGDataBase) DeleteManyURL(ctx context.Context, urls []string, user string) error {
+//func (db *PGDataBase) DeleteManyURL(ctx context.Context, urls []string, user string) error {
+//
+//	sql := `UPDATE urls SET is_deleted = true WHERE short_url = ANY ($1);`
+//	urlsToDelete := []string{}
+//	for _, url := range urls {
+//		if db.isOwner(ctx, url, user) {
+//			urlsToDelete = append(urlsToDelete, url)
+//		}
+//	}
+//	_, err := db.conn.ExecContext(ctx, sql, pq.Array(urlsToDelete))
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
+//
+//func (db *PGDataBase) isOwner(ctx context.Context, url string, user string) bool {
+//	sqlGetURLRow := `SELECT user_id FROM urls WHERE short_url=$1 FETCH FIRST ROW ONLY;`
+//	query := db.conn.QueryRowContext(ctx, sqlGetURLRow, url)
+//	result := ""
+//	query.Scan(&result)
+//	return result == user
+//}
 
-	sql := `UPDATE urls SET is_deleted = true WHERE short_url = ANY ($1);`
-	urlsToDelete := []string{}
-	for _, url := range urls {
-		if db.isOwner(ctx, url, user) {
-			urlsToDelete = append(urlsToDelete, url)
-		}
-	}
-	_, err := db.conn.ExecContext(ctx, sql, pq.Array(urlsToDelete))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (db *PGDataBase) isOwner(ctx context.Context, url string, user string) bool {
-	sqlGetURLRow := `SELECT user_id FROM urls WHERE short_url=$1 FETCH FIRST ROW ONLY;`
-	query := db.conn.QueryRowContext(ctx, sqlGetURLRow, url)
-	result := ""
-	query.Scan(&result)
-	return result == user
-}
-
-func (db *PGDataBase) DeleteURLs(ctx context.Context, urls []string, user string) error {
-	sql := `UPDATE urls SET is_deleted = true WHERE short_url = ANY ($1);`
-	urlsToDelete := []string{}
-	for _, url := range urls {
-		if db.isOwner(ctx, url, user) {
-			urlsToDelete = append(urlsToDelete, url)
-		}
-	}
-	_, err := db.conn.ExecContext(ctx, sql, pq.Array(urlsToDelete))
-	if err != nil {
-		return err
-	}
-	return nil
-}
+//func (db *PGDataBase) DeleteURLs(ctx context.Context, urls []string, user string) error {
+//	sql := `UPDATE urls SET is_deleted = true WHERE short_url = ANY ($1);`
+//	urlsToDelete := []string{}
+//	for _, url := range urls {
+//		if db.isOwner(ctx, url, user) {
+//			urlsToDelete = append(urlsToDelete, url)
+//		}
+//	}
+//	_, err := db.conn.ExecContext(ctx, sql, pq.Array(urlsToDelete))
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
