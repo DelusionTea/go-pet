@@ -62,11 +62,21 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 
 	body, err := ioutil.ReadAll(c.Request.Body)
 
-	if err := json.Unmarshal([]byte(body), &value); err != nil {
+	//if err := json.Unmarshal([]byte(body), &value); err != nil {
+	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+	//	log.Println("Server Error")
+	//	return
+	//}
+
+	json.Unmarshal([]byte(body), &value)
+	//response, err := h.repo.AddURLs(c.Request.Context(), data, c.GetString("userId"))
+
+	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error")
 		return
 	}
+
 	log.Println(value.Login, value.Password)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -101,18 +111,27 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	defer c.Request.Body.Close()
 
 	body, err := ioutil.ReadAll(c.Request.Body)
-
-	if err := json.Unmarshal([]byte(body), &value); err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
-		return
-	}
-	log.Println(value.Login, value.Password)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error")
 		return
 	}
+
+	json.Unmarshal([]byte(body), &value)
+	//response, err := h.repo.AddURLs(c.Request.Context(), data, c.GetString("userId"))
+
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
+	}
+	//if err := json.Unmarshal([]byte(body), &value); err != nil {
+	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+	//	log.Println("Server Error")
+	//	return
+	//}
+	log.Println(value.Login, value.Password)
+
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
 		log.Println("Bad Request Error")
