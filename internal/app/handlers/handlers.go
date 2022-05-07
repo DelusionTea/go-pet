@@ -64,14 +64,18 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
 	}
 	log.Println(value.Login, value.Password)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
 		return
 	}
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
+		log.Println("Bad Request Error")
 		return
 	}
 	err = h.repo.Register(value.Login, value.Password, c)
@@ -79,12 +83,15 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		var ue *DBError
 		if errors.As(err, &ue) && ue.Title == "Conflict" {
 			c.IndentedJSON(http.StatusConflict, "Status Conflict")
+			log.Println("Conflict")
 			return
 		}
 		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println("Server Error")
 		return
 	}
 	c.IndentedJSON(http.StatusOK, "Success Register")
+	log.Println("OK call Login")
 	h.HandlerLogin(c)
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
@@ -97,14 +104,18 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 
 	if err := json.Unmarshal([]byte(body), &value); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
 	}
 	log.Println(value.Login, value.Password)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
 		return
 	}
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
+		log.Println("Bad Request Error")
 		return
 	}
 	results, err = h.repo.Login(value.Login, value.Password, c)
@@ -117,12 +128,16 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		//}
 		if errors.As(err, &ue) && (ue.Title == "wrong password" || ue.Title == "user not found") {
 			c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+			log.Println("bad login pass")
 			return
 		}
 		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println("Server Error")
 		return
 	}
 	c.IndentedJSON(http.StatusOK, "Success Login")
+	log.Println("ok")
+
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
