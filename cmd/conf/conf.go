@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	FilePerm    = 0755
-	NumbWorkers = 10
+	//FilePerm    = 0755
+	NumbWorkers = 1
 	WorkerBuff  = 100
 )
 
