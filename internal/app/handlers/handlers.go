@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
+	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
 )
+
+const userkey = "user"
 
 type DBError struct {
 	Err   error
@@ -70,6 +73,7 @@ func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handl
 
 func (h *Handler) HandlerRegister(c *gin.Context) {
 	log.Println("Register Start")
+	session := sessions.Default(c)
 
 	value := user{}
 	defer c.Request.Body.Close()
@@ -120,16 +124,22 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	//TEMP
 	//baseURL := "http://" + h.serverAddress
 	//baseURL = baseURL + "/"
-	baseURL := "localhost"
-	c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-
-	CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
-	log.Println(CheckCookie, "- Проверка в функции Регистрации")
+	//baseURL := "localhost"
+	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
+	//
+	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
+	//log.Println(CheckCookie, "- Проверка в функции Регистрации")
+	session.Set(userkey, value.Login)
+	if err := session.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+		return
+	}
 
 	return
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	log.Println("Login Start")
+	session := sessions.Default(c)
 	var results string
 	value := user{}
 	defer c.Request.Body.Close()
@@ -181,18 +191,26 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 
 	//baseURL := "http://" + h.serverAddress
 	//baseURL = baseURL + "/"
-	baseURL := "localhost"
-	c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-	//log.Println("valueOwner in Login:", c.Cookie("user"))
-	//log.Println(id.String())
-	CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
-	log.Println(CheckCookie, "- Проверка в функции Логина")
+	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
+	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
+	//log.Println(CheckCookie, "- Проверка в функции Логина")
+	session.Set(userkey, value.Login)
+	if err := session.Save(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+		return
+	}
 	c.IndentedJSON(http.StatusOK, "Success Login")
 	log.Println("ok")
 
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(userkey)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	defer c.Request.Body.Close()
 
 	body, err := ioutil.ReadAll(c.Request.Body)
@@ -203,14 +221,14 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 		log.Println("Server Error")
 		return
 	}
-	value.Owner, err = c.Cookie("user")
-	log.Println("value.Owner:  ", value.Owner)
-	if err != nil {
-		log.Println("value.Owner:  ", value.Owner, "  we have error - empty")
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
-		return
-	}
-
+	//value.Owner, err = c.Cookie("user")
+	//log.Println("value.Owner:  ", value.Owner)
+	//if err != nil {
+	//	log.Println("value.Owner:  ", value.Owner, "  we have error - empty")
+	//	c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	//	return
+	//}
+	value.Owner = fmt.Sprintf("%v", user)
 	value.Order = body
 
 	err = h.repo.UploadOrder(value.Owner, value.Order, c)
