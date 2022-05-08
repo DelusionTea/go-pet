@@ -115,7 +115,9 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 	_, err := db.conn.ExecContext(ctx, sqlAddUser, login, pass)
 
 	if err, ok := err.(*pq.Error); ok {
+		log.Println("DB REGISTER ERROR HERE")
 		if err.Code == pgerrcode.UniqueViolation {
+			log.Println("UniqueViolation")
 			return handlers.NewErrorWithDB(err, "Conflict")
 		}
 		//if err.Code == pgerrcode.UniqueViolation {
@@ -133,21 +135,40 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 
 	result := GetUserData{}
 	query := db.conn.QueryRowContext(ctx, sqlCheckOrder, order)
-	query.Scan(&result.login) //or how check empty value?
+	err := query.Scan(&result.login) //or how check empty value?
 	if result.login != "" {
+		log.Println("DB ERROR OF UPLOAD ORDER")
+		log.Println(result.login)
+		log.Println(login)
 		if result.login == login {
+			log.Println("Alredy here")
 			return handlers.NewErrorWithDB(errors.New("Alredy here"), "Alredy here")
 		}
 		if result.login != login {
+			log.Println("Conflict")
 			return handlers.NewErrorWithDB(errors.New("Conflict"), "Conflict")
 		}
 
 	}
 
+	if err, ok := err.(*pq.Error); ok {
+		if err.Code == pgerrcode.NoData {
+			log.Println("pgerrcode.NoData")
+		}
+		if err.Code == pgerrcode.SuccessfulCompletion {
+			log.Println("pgerrcode.SuccessfulCompletion")
+		}
+		if err.Code == pgerrcode.CaseNotFound {
+			log.Println("pgerrcode.CaseNotFound")
+		}
+
+		log.Println(err)
+	}
+
 	sqlAddUser := `INSERT INTO users (login, order)
 				  VALUES ($1, $2)`
 
-	_, err := db.conn.ExecContext(ctx, sqlAddUser, login, order)
+	_, err = db.conn.ExecContext(ctx, sqlAddUser, login, order)
 
 	return err
 }
