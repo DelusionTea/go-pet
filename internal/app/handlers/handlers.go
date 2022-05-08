@@ -117,7 +117,9 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, "Success Register")
 	log.Println("OK call Login")
-	h.HandlerLogin(c)
+	//
+
+	c.SetCookie("user", value.Login, 864000, "/", h.serverAddress, false, false)
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	log.Println("Login Start")
@@ -149,7 +151,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
-		log.Println("Bad Request Error")
+		log.Println("Bad Request Error  Login:", value.Login, "  Passwprd:  ", value.Password)
 		return
 	}
 	results, err = h.repo.Login(value.Login, value.Password, c)
