@@ -16,14 +16,18 @@ import (
 )
 
 func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
+
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
 	router := gin.Default()
 	//router.
+	//store := cookie.NewStore([]byte("secret"))
+	//store.Options(sessions.Options{MaxAge:   60 * 60 * 24}) // expire in a day
+	//router.Use(sessions.Sessions("mysession", store))
 	router.Use(middleware.GzipEncodeMiddleware())
 	router.Use(middleware.GzipDecodeMiddleware())
 	//router.Use(middleware.CookieMiddleware(conf))
 	//router.Use(gzip.Gzip(gzip.DefaultCompression))
-	handler := handlers.New(repo, wp)
+	handler := handlers.New(repo, conf.ServerAddress, wp)
 	router.POST("/api/user/register", handler.HandlerRegister)
 	router.POST("/api/user/login", handler.HandlerLogin)
 	router.POST("/api/user/orders", handler.HandlerPostOrders)

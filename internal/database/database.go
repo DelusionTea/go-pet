@@ -38,10 +38,11 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	res1, err1 := db.ExecContext(ctx, sqlCreateUsersDB)
 	sqlCreateOrdersDB := `CREATE TABLE IF NOT EXISTS orders (
 								id serial PRIMARY KEY,
+								owner VARCHAR NOT NULL,
 								order_id uuid DEFAULT uuid_generate_v4 (), 	
 								status VARCHAR NOT NULL DEFAULT "NEW", 
 								accurual VARCHAR,
-								uploaded_at DATE NOT NULL
+								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
 					);`
 	res2, err2 := db.ExecContext(ctx, sqlCreateOrdersDB)
 	//sqlCreateDB := `CREATE TABLE IF NOT EXISTS urls (
@@ -126,8 +127,29 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 
 	return err
 }
-func (db *PGDataBase) UploadOrder(status string, ctx context.Context) {
-	return
+func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Context) error {
+	//Вначале селект. Если не пусто, то делаем проверку - если там другой пользак то alredy here, если другой то Conflict
+	sqlCheckOrder := `SELECT owner FROM orders WHERE order=$1 FETCH FIRST ROW ONLY;`
+
+	result := GetUserData{}
+	query := db.conn.QueryRowContext(ctx, sqlCheckOrder, order)
+	query.Scan(&result.login) //or how check empty value?
+	if result.login != "" {
+		if result.login == login {
+			return handlers.NewErrorWithDB(errors.New("Alredy here"), "Alredy here")
+		}
+		if result.login != login {
+			return handlers.NewErrorWithDB(errors.New("Conflict"), "Conflict")
+		}
+
+	}
+
+	sqlAddUser := `INSERT INTO users (login, order)
+				  VALUES ($1, $2)`
+
+	_, err := db.conn.ExecContext(ctx, sqlAddUser, login, order)
+
+	return err
 }
 func (db *PGDataBase) GetOrder(status string, ctx context.Context) {
 	return

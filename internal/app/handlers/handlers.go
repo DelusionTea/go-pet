@@ -10,8 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	//"github.com/gin-contrib/sessions"
-	//"github.com/gin-contrib/sessions/cookie"
+	"time"
 )
 
 type DBError struct {
@@ -35,7 +34,7 @@ type MarketInterface interface {
 	Register(login string, pass string, ctx context.Context) error
 	Login(login string, pass string, ctx context.Context) (string, error)
 	CheckAuth(login string, ctx context.Context) (string, error)
-	UploadOrder(status string, ctx context.Context)
+	UploadOrder(login string, order []byte, ctx context.Context) error
 	GetOrder(status string, ctx context.Context)
 	GetBalance(status string, ctx context.Context)
 	Withdraw(status string, ctx context.Context)
@@ -47,20 +46,31 @@ type user struct {
 	//IsLogined bool
 }
 
-type Handler struct {
-	repo MarketInterface
-	wp   workers.Workers
+type order struct {
+	Owner      string    `json:"login"`
+	Order      []byte    `json:"order"`
+	Status     string    `json:"status"`
+	Accrual    int       `json:"accrual"`
+	UploadedAt time.Time `json:"uploaded_at"`
 }
 
-func New(repo MarketInterface, wp *workers.Workers) *Handler {
+type Handler struct {
+	repo          MarketInterface
+	serverAddress string
+	wp            workers.Workers
+}
+
+func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handler {
 	return &Handler{
-		repo: repo,
-		wp:   *wp,
+		repo:          repo,
+		serverAddress: serverAddress,
+		wp:            *wp,
 	}
 }
 
 func (h *Handler) HandlerRegister(c *gin.Context) {
 	log.Println("Register Start")
+
 	value := user{}
 	defer c.Request.Body.Close()
 
@@ -159,12 +169,63 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		log.Println("Server Error")
 		return
 	}
+
+	c.SetCookie("user", value.Login, 864000, "/", h.serverAddress, false, false)
+	log.Println("user")
+	//log.Println(id.String())
+	//c.Set("userId", id.String())
 	c.IndentedJSON(http.StatusOK, "Success Login")
 	log.Println("ok")
 
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
+	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
+	value := order{}
+	value.Owner = c.GetString("userId")
+	if value.Owner == "" {
+		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+		return
+	}
+
+	defer c.Request.Body.Close()
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
+	}
+	value.Order = body
+
+	err = h.repo.UploadOrder(value.Owner, value.Order, c)
+	//200 — номер заказа уже был загружен этим пользователем;
+	//202 — новый номер заказа принят в обработку;
+	//!!!400 — неверный формат запроса;
+	//+++401 — пользователь не аутентифицирован;
+	//409 — номер заказа уже был загружен другим пользователем;
+	if err != nil {
+		var ue *DBError
+		if errors.As(err, &ue) && (ue.Title == "Already here") {
+			c.IndentedJSON(http.StatusOK, "Already here")
+			log.Println("Already here")
+			return
+		}
+		if errors.As(err, &ue) && (ue.Title == "Conflict") {
+			c.IndentedJSON(http.StatusConflict, "Conflict")
+			log.Println("Conflict")
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println("Server Error")
+		return
+	}
+	c.IndentedJSON(http.StatusAccepted, "Accepted")
+	log.Println("Accepted")
+
+	//CHECK BODY VALUE!!!!
+
 	//user := user{}
 	//h.repo.CheckAuth(user.Login, c)
 	//Номер заказа может быть проверен на корректность ввода с помощью алгоритма Луна.
@@ -177,14 +238,27 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	//Возможные коды ответа:
 	//200 — номер заказа уже был загружен этим пользователем;
 	//202 — новый номер заказа принят в обработку;
-	//400 — неверный формат запроса;
-	//401 — пользователь не аутентифицирован;
+	//!!!400 — неверный формат запроса;
+	//+++401 — пользователь не аутентифицирован;
 	//409 — номер заказа уже был загружен другим пользователем;
-	//422 — неверный формат номера заказа;
+	//!!!!!!!!!!!!!!422 — неверный формат номера заказа;!!!!!!!!!!!!!!!!!
 	//500 — внутренняя ошибка сервера.
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
+	//value := order{}
+	//value.Owner = c.GetString("userId")
+	//if value.Owner == "" {
+	//	c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	//	return
+	//}
+	//
+	//defer c.Request.Body.Close()
+	//
+	//body, err := ioutil.ReadAll(c.Request.Body)
+	////CHECK BODY VALUE
+	//value.Order = body
+
 	//	Хендлер доступен только авторизованному пользователю. Номера заказа в выдаче должны быть отсортированы по времени загрузки от самых старых к самым новым. Формат даты — RFC3339.
 	//		Доступные статусы обработки расчётов:
 	//	NEW — заказ загружен в систему, но не попал в обработку;
@@ -225,6 +299,12 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 	//	500 — внутренняя ошибка сервера
 }
 func (h *Handler) HandlerGetBalance(c *gin.Context) {
+	value := user{}
+	value.Login = c.GetString("userId")
+	if value.Login == "" {
+		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+		return
+	}
 	//Хендлер доступен только авторизованному пользователю. В ответе должны содержаться данные о текущей сумме баллов лояльности, а также сумме использованных за весь период регистрации баллов.
 	//	Формат запроса:
 	//GET /api/user/balance HTTP/1.1
@@ -245,6 +325,12 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	//500 — внутренняя ошибка сервера.
 }
 func (h *Handler) HandlerWithdraw(c *gin.Context) {
+	value := user{}
+	value.Login = c.GetString("userId")
+	if value.Login == "" {
+		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+		return
+	}
 	//Хендлер доступен только авторизованному пользователю. Номер заказа представляет собой гипотетический номер нового заказа пользователя, в счёт оплаты которого списываются баллы.
 	//	Примечание: для успешного списания достаточно успешной регистрации запроса, никаких внешних систем начисления не предусмотрено и не требуется реализовывать.
 	//	Формат запроса:
@@ -264,6 +350,12 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	//500 — внутренняя ошибка сервера.
 }
 func (h *Handler) HandlerWithdraws(c *gin.Context) {
+	value := user{}
+	value.Login = c.GetString("userId")
+	if value.Login == "" {
+		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+		return
+	}
 	//	Хендлер доступен только авторизованному пользователю. Факты выводов в выдаче должны быть отсортированы по времени вывода от самых старых к самым новым. Формат даты — RFC3339.
 	//		Формат запроса:
 	//	GET /api/user/withdrawals HTTP/1.1
