@@ -206,7 +206,8 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(userkey)
+	user := session.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
