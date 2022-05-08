@@ -75,12 +75,20 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	log.Println("Register Start")
 	//session := sessions.Default(c)
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
-
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
+	}
 	value := user{}
 	defer c.Request.Body.Close()
 
 	body, err := ioutil.ReadAll(c.Request.Body)
-
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
+	}
 	//if err := json.Unmarshal([]byte(body), &value); err != nil {
 	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 	//	log.Println("Server Error")
@@ -97,12 +105,12 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		return
 	}
 
-	log.Println(value.Login, value.Password)
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
-		return
-	}
+	//log.Println(value.Login, value.Password)
+	//if err != nil {
+	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+	//	log.Println("Server Error")
+	//	return
+	//}
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
 		log.Println("Bad Request Error")
@@ -141,7 +149,12 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	log.Println("Login Start")
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
-	var results string
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
+	}
+	//var results string
 	value := user{}
 	defer c.Request.Body.Close()
 
@@ -172,8 +185,8 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		log.Println("Bad Request Error  Login:", value.Login, "  Passwprd:  ", value.Password)
 		return
 	}
-	results, err = h.repo.Login(value.Login, value.Password, c)
-	log.Println(results)
+	results, err := h.repo.Login(value.Login, value.Password, c)
+	//
 	if err != nil {
 		var ue *DBError
 		//if errors.As(err, &ue) && ue.Title == "user not found" {
@@ -189,7 +202,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		log.Println("Server Error")
 		return
 	}
-
+	log.Println(results)
 	//baseURL := "http://" + h.serverAddress
 	//baseURL = baseURL + "/"
 	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
@@ -207,22 +220,27 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error")
+		return
+	}
 	user, ok := store.Get("user")
 	log.Println("user is......", fmt.Sprintf("%v", user))
-	if user == nil {
+	if user == nil || (!ok) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 	defer c.Request.Body.Close()
 
 	body, err := ioutil.ReadAll(c.Request.Body)
-	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
-	value := order{}
-	if err != nil || (!ok) {
+	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error")
 		return
 	}
+	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
+	value := order{}
 	//value.Owner, err = c.Cookie("user")
 	//log.Println("value.Owner:  ", value.Owner)
 	//if err != nil {
