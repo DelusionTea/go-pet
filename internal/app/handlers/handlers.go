@@ -77,7 +77,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error 80")
 		return
 	}
 	value := user{}
@@ -86,7 +86,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error  89")
 		return
 	}
 	//if err := json.Unmarshal([]byte(body), &value); err != nil {
@@ -101,7 +101,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error 104")
 		return
 	}
 
@@ -113,7 +113,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	//}
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
-		log.Println("Bad Request Error")
+		log.Println("Bad Request Error 116")
 		return
 	}
 	err = h.repo.Register(value.Login, value.Password, c)
@@ -121,11 +121,11 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		var ue *DBError
 		if errors.As(err, &ue) && ue.Title == "Conflict" {
 			c.IndentedJSON(http.StatusConflict, "Status Conflict")
-			log.Println("Conflict")
+			log.Println("Conflict  124")
 			return
 		}
 		c.IndentedJSON(http.StatusInternalServerError, err)
-		log.Println("Server Error")
+		log.Println("Server Error 128")
 		return
 	}
 	c.IndentedJSON(http.StatusOK, "Success Register")
@@ -141,6 +141,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+		log.Println("Server Error 144")
 		return
 	}
 
@@ -151,7 +152,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error 155")
 		return
 	}
 	//var results string
@@ -161,7 +162,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error 165")
 		return
 	}
 
@@ -170,7 +171,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error 174")
 		return
 	}
 	//if err := json.Unmarshal([]byte(body), &value); err != nil {
@@ -182,7 +183,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
-		log.Println("Bad Request Error  Login:", value.Login, "  Passwprd:  ", value.Password)
+		log.Println("Bad Request Error 186  Login:", value.Login, "  Passwprd:  ", value.Password)
 		return
 	}
 	results, err := h.repo.Login(value.Login, value.Password, c)
@@ -199,7 +200,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 			return
 		}
 		c.IndentedJSON(http.StatusInternalServerError, err)
-		log.Println("Server Error")
+		log.Println("Server Error 203")
 		return
 	}
 	log.Println(results)
@@ -211,6 +212,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+		log.Println("Server Error 215")
 		return
 	}
 	c.IndentedJSON(http.StatusOK, "Success Login")
@@ -222,7 +224,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error 227")
 		return
 	}
 	user, ok := store.Get("user")
@@ -236,7 +238,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error")
+		log.Println("Server Error 241")
 		return
 	}
 	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
@@ -270,7 +272,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 			return
 		}
 		c.IndentedJSON(http.StatusInternalServerError, err)
-		log.Println("Server Error")
+		log.Println("Server Error 275")
 		return
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
