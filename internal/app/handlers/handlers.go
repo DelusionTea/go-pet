@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	//"github.com/gin-contrib/sessions"
+	//"github.com/gin-contrib/sessions/cookie"
 )
 
 type DBError struct {
@@ -32,6 +34,7 @@ type MarketInterface interface {
 	UpdateStatus(status string, ctx context.Context)
 	Register(login string, pass string, ctx context.Context) error
 	Login(login string, pass string, ctx context.Context) (string, error)
+	CheckAuth(login string, ctx context.Context) (string, error)
 	UploadOrder(status string, ctx context.Context)
 	GetOrder(status string, ctx context.Context)
 	GetBalance(status string, ctx context.Context)
@@ -41,6 +44,7 @@ type MarketInterface interface {
 type user struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
+	//IsLogined bool
 }
 
 type Handler struct {
@@ -69,6 +73,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	//}
 
 	json.Unmarshal([]byte(body), &value)
+
 	//response, err := h.repo.AddURLs(c.Request.Context(), data, c.GetString("userId"))
 
 	if err != nil {
@@ -160,6 +165,8 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
+	//user := user{}
+	//h.repo.CheckAuth(user.Login, c)
 	//Номер заказа может быть проверен на корректность ввода с помощью алгоритма Луна.
 	//	Формат запроса:
 	//POST /api/user/orders HTTP/1.1

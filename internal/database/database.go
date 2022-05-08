@@ -33,7 +33,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								user_id uuid DEFAULT uuid_generate_v4 (), 	
 								login VARCHAR NOT NULL UNIQUE, 
 								password VARCHAR NOT NULL UNIQUE,
-								is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+								is_authed BOOLEAN NOT NULL DEFAULT FALSE
 					);`
 	res1, err1 := db.ExecContext(ctx, sqlCreateUsersDB)
 	sqlCreateOrdersDB := `CREATE TABLE IF NOT EXISTS orders (
@@ -69,6 +69,7 @@ type OrderInfo struct {
 type GetUserData struct {
 	login    string
 	password string
+	authed   bool
 }
 
 func (db *PGDataBase) UpdateStatus(status string, ctx context.Context) {
@@ -85,9 +86,27 @@ func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (str
 	if result.password != pass {
 		return "", handlers.NewErrorWithDB(errors.New("wrong password"), "wrong password")
 	}
+	//UPDATE users SET is_authed = true WHERE login = ANY ($1);
+	sqlSetAuth := `UPDATE users SET is_authed = true WHERE login = ANY ($1);`
+	queryauth := db.conn.QueryRowContext(ctx, sqlSetAuth, login)
+	queryauth.Scan(&result.authed)
 	return "Login success", nil
-
 }
+
+func (db *PGDataBase) CheckAuth(login string, ctx context.Context) (string, error) {
+	sqlGetStatus := `SELECT login,is_authed FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
+	result := GetUserData{}
+	query := db.conn.QueryRowContext(ctx, sqlGetStatus, login)
+	query.Scan(&result.login, &result.authed)
+	if result.login == "" {
+		return "", handlers.NewErrorWithDB(errors.New("not found"), "user not found")
+	}
+	if result.authed == false {
+		return "", handlers.NewErrorWithDB(errors.New("not authed"), "user not authed")
+	}
+	return "ok", nil
+}
+
 func (db *PGDataBase) Register(login string, pass string, ctx context.Context) error {
 	sqlAddUser := `INSERT INTO users (login, password)
 				  VALUES ($1, $2)`
