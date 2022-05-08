@@ -131,7 +131,7 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 		//}
 		log.Println(err)
 	}
-
+	log.Println("err is nil")
 	return err
 }
 func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Context) error {

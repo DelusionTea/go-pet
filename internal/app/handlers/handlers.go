@@ -184,7 +184,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
 	value := order{}
-	value.Owner = c.GetString("userId")
+	value.Owner = c.GetString("user")
 	if value.Owner == "" {
 		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
 		return
