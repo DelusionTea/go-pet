@@ -178,7 +178,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	//baseURL = baseURL + "/"
 	baseURL := "localhost"
 	c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-	log.Println("user")
+	log.Println("valueOwner in Login:", c.GetString("user"))
 	//log.Println(id.String())
 	//c.Set("userId", id.String())
 	c.IndentedJSON(http.StatusOK, "Success Login")
