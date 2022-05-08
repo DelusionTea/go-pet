@@ -35,6 +35,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								password VARCHAR NOT NULL UNIQUE,
 								is_authed BOOLEAN NOT NULL DEFAULT FALSE
 					);`
+	log.Println("Create first TABLE")
 	res1, err1 := db.ExecContext(ctx, sqlCreateUsersDB)
 	sqlCreateOrdersDB := `CREATE TABLE IF NOT EXISTS orders (
 								id serial PRIMARY KEY,
@@ -45,6 +46,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
 					);`
 	res2, err2 := db.ExecContext(ctx, sqlCreateOrdersDB)
+	log.Println("Create second TABLE")
 	//sqlCreateDB := `CREATE TABLE IF NOT EXISTS urls (
 	//							id serial PRIMARY KEY,
 	//							user_id uuid DEFAULT uuid_generate_v4 (),
@@ -53,7 +55,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	//							is_deleted BOOLEAN NOT NULL DEFAULT FALSE
 	//				);`
 	//res, err := db.ExecContext(ctx, sqlCreateDB)
-	log.Println("Create table", err1, res1, err2, res2)
+	log.Println("Create table", "1.", err1, res1, "2", err2, res2)
 	return nil
 }
 
@@ -77,6 +79,7 @@ func (db *PGDataBase) UpdateStatus(status string, ctx context.Context) {
 	return
 }
 func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (string, error) {
+	log.Println("Start Login")
 	sqlGetUser := `SELECT login,password FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
 	query := db.conn.QueryRowContext(ctx, sqlGetUser, login)
 	result := GetUserData{}
@@ -95,6 +98,7 @@ func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (str
 }
 
 func (db *PGDataBase) CheckAuth(login string, ctx context.Context) (string, error) {
+	log.Println("Check Auth Start")
 	sqlGetStatus := `SELECT login,is_authed FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
 	result := GetUserData{}
 	query := db.conn.QueryRowContext(ctx, sqlGetStatus, login)
@@ -109,6 +113,7 @@ func (db *PGDataBase) CheckAuth(login string, ctx context.Context) (string, erro
 }
 
 func (db *PGDataBase) Register(login string, pass string, ctx context.Context) error {
+	log.Println("Start Register")
 	sqlAddUser := `INSERT INTO users (login, password)
 				  VALUES ($1, $2)`
 
