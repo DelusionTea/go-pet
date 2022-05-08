@@ -117,9 +117,10 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, "Success Register")
 	log.Println("OK call Login")
-	//
-
-	c.SetCookie("user", value.Login, 864000, "/", h.serverAddress, false, false)
+	//TEMP
+	baseURL := "http://" + h.serverAddress
+	baseURL = baseURL + "/"
+	c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	log.Println("Login Start")
