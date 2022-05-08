@@ -178,7 +178,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	//baseURL = baseURL + "/"
 	baseURL := "localhost"
 	c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-	log.Println("valueOwner in Login:", c.GetString("user"))
+	//log.Println("valueOwner in Login:", c.Cookie("user"))
 	//log.Println(id.String())
 	//c.Set("userId", id.String())
 	c.IndentedJSON(http.StatusOK, "Success Login")
@@ -192,19 +192,19 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	body, err := ioutil.ReadAll(c.Request.Body)
 	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
 	value := order{}
-	value.Owner = c.GetString("user")
-	log.Println("value.Owner:  ", value.Owner)
-	if value.Owner == "" {
-		log.Println("value.Owner:  ", value.Owner, "  we have error - empty")
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
-		return
-	}
-
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error")
 		return
 	}
+	value.Owner, err = c.Cookie("user")
+	log.Println("value.Owner:  ", value.Owner)
+	if err != nil {
+		log.Println("value.Owner:  ", value.Owner, "  we have error - empty")
+		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+		return
+	}
+
 	value.Order = body
 
 	err = h.repo.UploadOrder(value.Owner, value.Order, c)
