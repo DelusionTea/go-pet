@@ -182,17 +182,18 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
-	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
-	value := order{}
-	value.Owner = c.GetString("user")
-	if value.Owner == "" {
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
-		return
-	}
-
 	defer c.Request.Body.Close()
 
 	body, err := ioutil.ReadAll(c.Request.Body)
+	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
+	value := order{}
+	value.Owner = c.GetString("user")
+	log.Println("value.Owner:  ", value.Owner)
+	if value.Owner == "" {
+		log.Println("value.Owner:  ", value.Owner, "  we have error - empty")
+		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+		return
+	}
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
