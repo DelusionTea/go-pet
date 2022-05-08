@@ -122,6 +122,11 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	//baseURL = baseURL + "/"
 	baseURL := "localhost"
 	c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
+
+	CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
+	log.Println(CheckCookie, "- Проверка в функции Регистрации")
+
+	return
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	log.Println("Login Start")
@@ -180,7 +185,8 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
 	//log.Println("valueOwner in Login:", c.Cookie("user"))
 	//log.Println(id.String())
-	//c.Set("userId", id.String())
+	CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
+	log.Println(CheckCookie, "- Проверка в функции Логина")
 	c.IndentedJSON(http.StatusOK, "Success Login")
 	log.Println("ok")
 
