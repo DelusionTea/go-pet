@@ -8,8 +8,9 @@ import (
 	"github.com/DelusionTea/go-pet.git/internal/app/middleware"
 	"github.com/DelusionTea/go-pet.git/internal/database"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
-	//"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/contrib/sessions"
+	"github.com/go-session/redis/v3"
+	"github.com/go-session/session/v3"
+
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -20,10 +21,15 @@ import (
 var secret = []byte("secret")
 
 func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
-
+	session.InitManager(
+		session.SetStore(redis.NewRedisStore(&redis.Options{
+			Addr: conf.ServerAddress,
+			DB:   15, //Что это за строка-то?
+		})),
+	)
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
 	router := gin.Default()
-	router.Use(sessions.Sessions("mysession", sessions.NewCookieStore(secret)))
+	//router.Use(sessions.Sessions("mysession", sessions.NewCookieStore(secret)))
 	//store := cookie.NewStore([]byte("secret"))
 	//store.Options(sessions.Options{MaxAge:   60 * 60 * 24}) // expire in a day
 	//router.Use(sessions.Sessions("mysession", store))

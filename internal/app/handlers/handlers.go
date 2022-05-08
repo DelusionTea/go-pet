@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
-	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/go-session/session/v3"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -73,7 +73,8 @@ func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handl
 
 func (h *Handler) HandlerRegister(c *gin.Context) {
 	log.Println("Register Start")
-	session := sessions.Default(c)
+	//session := sessions.Default(c)
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
 
 	value := user{}
 	defer c.Request.Body.Close()
@@ -129,8 +130,8 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	//
 	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
 	//log.Println(CheckCookie, "- Проверка в функции Регистрации")
-	session.Set(userkey, value.Login)
-	if err := session.Save(); err != nil {
+	store.Set(userkey, value.Login)
+	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
@@ -139,7 +140,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	log.Println("Login Start")
-	session := sessions.Default(c)
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	var results string
 	value := user{}
 	defer c.Request.Body.Close()
@@ -194,8 +195,8 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
 	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
 	//log.Println(CheckCookie, "- Проверка в функции Логина")
-	session.Set(userkey, value.Login)
-	if err := session.Save(); err != nil {
+	store.Set(userkey, value.Login)
+	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
@@ -205,8 +206,8 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get("user")
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	user, ok := store.Get("user")
 	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -217,7 +218,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	body, err := ioutil.ReadAll(c.Request.Body)
 	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
 	value := order{}
-	if err != nil {
+	if err != nil || (!ok) {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error")
 		return
