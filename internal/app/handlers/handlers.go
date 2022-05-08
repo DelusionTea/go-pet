@@ -142,6 +142,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		log.Println("Server Error 144")
+		log.Println(err.Error())
 		return
 	}
 
