@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const userkey = "user"
+//const userkey = "user"
 
 type DBError struct {
 	Err   error
@@ -130,7 +130,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	//
 	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
 	//log.Println(CheckCookie, "- Проверка в функции Регистрации")
-	store.Set(userkey, value.Login)
+	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
@@ -195,7 +195,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
 	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
 	//log.Println(CheckCookie, "- Проверка в функции Логина")
-	store.Set(userkey, value.Login)
+	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
