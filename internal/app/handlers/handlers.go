@@ -333,6 +333,7 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 		c.IndentedJSON(http.StatusNoContent, result)
 		return
 	}
+	log.Println(result)
 	c.IndentedJSON(http.StatusOK, result)
 	//	Хендлер доступен только авторизованному пользователю. Номера заказа в выдаче должны быть отсортированы по времени загрузки от самых старых к самым новым. Формат даты — RFC3339.
 	//		Доступные статусы обработки расчётов:
