@@ -23,8 +23,8 @@ var secret = []byte("secret")
 func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
 	session.InitManager(
 		session.SetStore(redis.NewRedisStore(&redis.Options{
-			Addr: conf.ServerAddress,
-			DB:   15, //Что это за строка-то?
+			Addr: conf.RedisAddress,
+			DB:   15,
 		})),
 	)
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
