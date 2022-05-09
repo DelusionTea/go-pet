@@ -42,9 +42,10 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								order_temp VARCHAR NOT NULL,
 								order_id uuid DEFAULT uuid_generate_v4 (), 	
 								status VARCHAR, 
-								accurual VARCHAR DEFAULT '0',
+								accural VARCHAR DEFAULT '0',
 								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
 					);`
+	//SELECT order_temp, status, accural, uploadet_at FROM orders WHERE owner=$1
 	res2, err2 := db.ExecContext(ctx, sqlCreateOrdersDB)
 	log.Println("Create second TABLE")
 	//sqlCreateDB := `CREATE TABLE IF NOT EXISTS urls (
@@ -176,7 +177,7 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.ResponseOrder, error) {
 
 	result := []handlers.ResponseOrder{}
-	sqlGetOrder := `SELECT order_temp, status, accural, uploadet_at FROM orders WHERE owner=$1;`
+	sqlGetOrder := `SELECT order_temp, status, accural, uploaded_at FROM orders WHERE owner=$1;`
 	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, login)
 	if err != nil {
 		log.Println("err db.conn.QueryContext")
