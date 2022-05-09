@@ -456,23 +456,6 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, "Ok")
 
-	//Хендлер доступен только авторизованному пользователю. Номер заказа представляет собой гипотетический номер нового заказа пользователя, в счёт оплаты которого списываются баллы.
-	//	Примечание: для успешного списания достаточно успешной регистрации запроса, никаких внешних систем начисления не предусмотрено и не требуется реализовывать.
-	//	Формат запроса:
-	//POST /api/user/balance/withdraw HTTP/1.1
-	//Content-Type: application/json
-	//
-	//{
-	//	"order": "2377225624",
-	//	"sum": 751
-	//}
-	//Здесь order — номер заказа, а sum — сумма баллов к списанию в счёт оплаты.
-	//	Возможные коды ответа:
-	//200 — успешная обработка запроса;
-	//401 — пользователь не авторизован;
-	//402 — на счету недостаточно средств;
-	//422 — неверный номер заказа;
-	//500 — внутренняя ошибка сервера.
 }
 func (h *Handler) HandlerWithdraws(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
@@ -487,6 +470,20 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+
+	result, err := h.repo.GetWithdraws(fmt.Sprintf("%v", user), c.Request.Context())
+	//result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		return
+	}
+	if len(result) == 0 {
+		c.IndentedJSON(http.StatusNoContent, result)
+		return
+	}
+	log.Println(result)
+
+	c.JSON(http.StatusOK, result)
 	//	Хендлер доступен только авторизованному пользователю. Факты выводов в выдаче должны быть отсортированы по времени вывода от самых старых к самым новым. Формат даты — RFC3339.
 	//		Формат запроса:
 	//	GET /api/user/withdrawals HTTP/1.1
