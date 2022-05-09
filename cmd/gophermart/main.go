@@ -8,8 +8,6 @@ import (
 	"github.com/DelusionTea/go-pet.git/internal/app/middleware"
 	"github.com/DelusionTea/go-pet.git/internal/database"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
-	"github.com/go-session/redis/v3"
-	"github.com/go-session/session/v3"
 
 	"github.com/gin-gonic/gin"
 	"log"
@@ -20,14 +18,27 @@ import (
 
 var secret = []byte("secret")
 
-func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
-	session.InitManager(
-		session.SetStore(redis.NewRedisStore(&redis.Options{
-			Addr: "localhost:6379",
-			DB:   15, //Что это за строка-то?
-		})),
-	)
+func setupRouter(repo handlers.MarketInterface, redis *database.Redis, conf *conf.Config, wp *workers.Workers) *gin.Engine {
+	//client := redis.NewClient(&redis.Options{
+	//	Addr:     "localhost:6379",
+	//	Password: "",
+	//	DB:       0,
+	//})
+	//rdb := redis.NewClient(&redis.Options{
+	//	Addr:     "localhost:6379",
+	//	Password: "", // no password set
+	//	DB:       0,  // use default DB
+	//})
+	//redis.N
+
+	//session.InitManager(
+	//	session.SetStore(redis.NewRedisStore(&redis.Options{
+	//		Addr: "localhost:6379",
+	//		DB:   15, //Что это за строка-то?
+	//	})),
+	//)
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
+
 	router := gin.Default()
 	//router.Use(sessions.Sessions("mysession", sessions.NewCookieStore(secret)))
 	//store := cookie.NewStore([]byte("secret"))
@@ -70,7 +81,10 @@ func main() {
 		wp.Run(ctx)
 	}()
 	//if cfg.DataBase != "" {
-
+	redis, err := database.NewRedisDatabase(cfg.RedisAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
 	db, err := sql.Open("postgres", cfg.DataBase)
 	if err != nil {
 		log.Fatal(err)
@@ -78,7 +92,7 @@ func main() {
 	defer db.Close()
 	database.SetUpDataBase(db, ctx)
 	log.Println(database.NewDatabaseRepository(db))
-	handler = setupRouter(database.NewDatabase(db), cfg, wp)
+	handler = setupRouter(database.NewDatabase(db), redis, cfg, wp)
 	//	//handler = setupRouter(memory.NewMemoryFile(cfg.FilePath, cfg.BaseURL), cfg.BaseURL, cfg)
 	//} else {
 	//	handler = setupRouter(memory.NewMemoryFile(ctx, cfg.FilePath, cfg.BaseURL), cfg, wp)
