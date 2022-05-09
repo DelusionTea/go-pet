@@ -326,6 +326,35 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 	//422 — неверный номер заказа;
 	return nil
 }
+func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.ResponseOrderInfo, error) {
+	result := handlers.ResponseOrderInfo{}
+
+	sqlGetOrder := `SELECT order_temp, status, accural FROM orders WHERE order_temp=($1);`
+	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, order)
+	if err != nil {
+		log.Println("err db.conn.QueryContext")
+		return result, err
+	}
+	if rows.Err() != nil {
+		log.Println("err rows.Err() != nil")
+		return result, rows.Err()
+	}
+	var u handlers.ResponseOrderInfo
+	err = rows.Scan(&u.Order, &u.Status, &u.Accrual)
+	if err != nil {
+		log.Println("err  rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)")
+		return result, err
+	}
+	//result = append(result, u)
+
+	result = handlers.ResponseOrderInfo{
+		Order:   u.Order,
+		Status:  u.Status,
+		Accrual: u.Accrual,
+	}
+
+	return result, nil
+}
 func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handlers.ResponseWithdraws, error) {
 	result := []handlers.ResponseWithdraws{}
 

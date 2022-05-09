@@ -46,6 +46,7 @@ type MarketInterface interface {
 	Withdraw(login string, order []byte, value float64, ctx context.Context) error
 	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
 	UpdateWallet(order string, value float64, ctx context.Context) error
+	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
 }
 type user struct {
 	Login    string `json:"login"`
@@ -66,6 +67,12 @@ type ResponseOrder struct {
 	Status     string    `json:"status"`
 	Accrual    int       `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+type ResponseOrderInfo struct {
+	Order   string `json:"number"`
+	Status  string `json:"status"`
+	Accrual int    `json:"accrual"`
 }
 
 //type ResponseWithdraw struct {
@@ -488,6 +495,13 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 
 }
 func (h *Handler) HandlerGetInfo(c *gin.Context) {
+	locOrder := c.Param("number")
+	result, err := h.repo.GetWithdraws(locOrder, c)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 	//Формат запроса:
 	//GET /api/orders/{number} HTTP/1.1
 	//Content-Length: 0
