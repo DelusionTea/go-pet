@@ -141,7 +141,7 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 		log.Println(login)
 		if result.login == login {
 			log.Println("Alredy here")
-			return handlers.NewErrorWithDB(errors.New("Alredy here"), "Alredy here")
+			return handlers.NewErrorWithDB(errors.New("Alredy here"), "Already here")
 		}
 		if result.login != login {
 			log.Println("Conflict")
@@ -153,6 +153,7 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 	if err, ok := err.(*pq.Error); ok {
 		if err.Code == pgerrcode.NoData {
 			log.Println("pgerrcode.NoData")
+
 		}
 		if err.Code == pgerrcode.SuccessfulCompletion {
 			log.Println("pgerrcode.SuccessfulCompletion")
@@ -162,6 +163,7 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 		}
 
 		log.Println(err)
+		return err
 	}
 
 	sqlAddOrder := `INSERT INTO orders (owner, order_temp,status)
@@ -177,9 +179,11 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 	sqlGetOrder := `SELECT order_temp, status, accural, uploadet_at FROM orders WHERE owner=$1;`
 	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, login)
 	if err != nil {
+		log.Println("err db.conn.QueryContext")
 		return result, err
 	}
 	if rows.Err() != nil {
+		log.Println("err rows.Err() != nil")
 		return result, rows.Err()
 	}
 	defer rows.Close()
@@ -188,6 +192,7 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 		var u handlers.ResponseOrder
 		err = rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)
 		if err != nil {
+			log.Println("err  rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)")
 			return result, err
 		}
 		result = append(result, u)

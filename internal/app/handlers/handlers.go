@@ -267,11 +267,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	}
 
 	err = h.repo.UploadOrder(value.Owner, value.Order, c)
-	//200 — номер заказа уже был загружен этим пользователем;
-	//202 — новый номер заказа принят в обработку;
-	//!!!400 — неверный формат запроса;
-	//+++401 — пользователь не аутентифицирован;
-	//409 — номер заказа уже был загружен другим пользователем;
+
 	if err != nil {
 		var ue *DBError
 		if errors.As(err, &ue) && (ue.Title == "Already here") {
