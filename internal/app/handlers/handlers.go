@@ -306,6 +306,18 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		//log.Println("Server Error 227")
+		return
+	}
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	//value := order{}
 	//value.Owner = c.GetString("userId")
 	//if value.Owner == "" {
@@ -359,10 +371,16 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 	//	500 — внутренняя ошибка сервера
 }
 func (h *Handler) HandlerGetBalance(c *gin.Context) {
-	value := user{}
-	value.Login = c.GetString("userId")
-	if value.Login == "" {
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 227")
+		return
+	}
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 	//Хендлер доступен только авторизованному пользователю. В ответе должны содержаться данные о текущей сумме баллов лояльности, а также сумме использованных за весь период регистрации баллов.
@@ -385,10 +403,16 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	//500 — внутренняя ошибка сервера.
 }
 func (h *Handler) HandlerWithdraw(c *gin.Context) {
-	value := user{}
-	value.Login = c.GetString("userId")
-	if value.Login == "" {
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 227")
+		return
+	}
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 	//Хендлер доступен только авторизованному пользователю. Номер заказа представляет собой гипотетический номер нового заказа пользователя, в счёт оплаты которого списываются баллы.
@@ -410,10 +434,16 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	//500 — внутренняя ошибка сервера.
 }
 func (h *Handler) HandlerWithdraws(c *gin.Context) {
-	value := user{}
-	value.Login = c.GetString("userId")
-	if value.Login == "" {
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 227")
+		return
+	}
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 	//	Хендлер доступен только авторизованному пользователю. Факты выводов в выдаче должны быть отсортированы по времени вывода от самых старых к самым новым. Формат даты — RFC3339.
