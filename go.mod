@@ -7,9 +7,11 @@ require (
 	github.com/gin-gonic/contrib v0.0.0-20201101042839-6a891bf89f19
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-session/cookie v3.0.1+incompatible
+	github.com/go-session/session v3.1.2+incompatible
 	github.com/go-session/session/v3 v3.1.6
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/lib/pq v1.10.5
+	github.com/theplant/luhn v0.0.0-20170224032821-81a1a381387a
 )
 
 require (
@@ -18,7 +20,6 @@ require (
 	github.com/go-playground/locales v0.13.0 // indirect
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
-	github.com/go-session/session v3.1.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/go-cmp v0.5.6 // indirect

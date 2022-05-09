@@ -8,9 +8,11 @@ import (
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/go-session/session/v3"
+	"github.com/theplant/luhn"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -260,11 +262,11 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	value.Owner = fmt.Sprintf("%v", user)
 	value.Order = body
 
-	//TEMP
-	//if len(value.Order) < 15 {
-	//	c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
-	//	return
-	//}
+	check, err := strconv.Atoi(string(value.Order))
+	if luhn.Valid(check) {
+		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
+		return
+	}
 
 	err = h.repo.UploadOrder(value.Owner, value.Order, c)
 	//200 — номер заказа уже был загружен этим пользователем;
