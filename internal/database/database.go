@@ -177,6 +177,7 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.ResponseOrder, error) {
 
 	result := []handlers.ResponseOrder{}
+
 	sqlGetOrder := `SELECT order_temp, status, accural, uploaded_at FROM orders WHERE owner=$1;`
 	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, login)
 	if err != nil {
@@ -196,7 +197,22 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 			log.Println("err  rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)")
 			return result, err
 		}
-		result = append(result, u)
+		//result = append(result, u)
+		if u.Accrual != 0 {
+			result = append(result, handlers.ResponseOrder{
+				Order:      u.Order,
+				Status:     u.Status,
+				Accrual:    u.Accrual,
+				UploadedAt: u.UploadedAt,
+			})
+		} else {
+			result = append(result, handlers.ResponseOrder{
+				Order:      u.Order,
+				Status:     u.Status,
+				UploadedAt: u.UploadedAt,
+			})
+		}
+
 	}
 	return result, nil
 }
