@@ -56,8 +56,8 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	sqlCreateWalletDB := `CREATE TABLE IF NOT EXISTS wallet (
 								id serial PRIMARY KEY,
 								owner VARCHAR NOT NULL, UNIQUE,
-								current_value double precision,
-								withdrawed integer,
+								current_value VARCHAR,
+								withdrawed VARCHAR,
 					);`
 	res3, err3 := db.ExecContext(ctx, sqlCreateWalletDB)
 	sqlCreateWithdrawsDB := `CREATE TABLE IF NOT EXISTS withdraws (
@@ -176,7 +176,7 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 	sqlAddWallet := `INSERT INTO users (owner, current_value, withdrawed)
 				  VALUES ($1, $2, $3)`
 
-	_, err = db.conn.ExecContext(ctx, sqlAddWallet, login, 0, 0)
+	_, err = db.conn.ExecContext(ctx, sqlAddWallet, login, '0', '0')
 	log.Println("err is nil")
 	return err
 }
