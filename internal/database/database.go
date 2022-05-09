@@ -174,7 +174,7 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.ResponseOrder, error) {
 
 	result := []handlers.ResponseOrder{}
-	sqlGetOrder := `SELECT order_temp, status, accural, uploadet_at FROM urls WHERE owner=$1;`
+	sqlGetOrder := `SELECT order_temp, status, accural, uploadet_at FROM orders WHERE owner=$1;`
 	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, login)
 	if err != nil {
 		return result, err
