@@ -112,14 +112,14 @@ func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Cont
 	return nil
 }
 
-func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Context) {
+func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Context) error {
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ANY ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
 	if err != nil {
 		log.Println("err db.conn.QueryContext")
-		return
+		return err
 	}
-	return
+	return nil
 }
 func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (string, error) {
 	log.Println("Start Login")
@@ -247,7 +247,7 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 		err = rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)
 		if err != nil {
 			log.Println("err  rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)")
-			return result, err
+			return result, handlers.NewErrorWithDB(errors.New("GetOrder"), "GetOrder")
 		}
 		//result = append(result, u)
 		if u.Accrual != 0 {
@@ -377,7 +377,7 @@ func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handler
 		err = rows.Scan(&u.Order, &u.Sum, &u.ProcessedAt)
 		if err != nil {
 			log.Println("err  rows.Scan(&u.Order, &u.Sum,&u.ProcessedAt)")
-			return result, err
+			return result, handlers.NewErrorWithDB(errors.New("ResponseWithdraws"), "ResponseWithdraws")
 		}
 
 		result = append(result, handlers.ResponseWithdraws{

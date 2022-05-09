@@ -36,7 +36,7 @@ func NewErrorWithDB(err error, title string) error {
 }
 
 type MarketInterface interface {
-	UpdateStatus(order string, status string, ctx context.Context)
+	UpdateStatus(order string, status string, ctx context.Context) error
 	Register(login string, pass string, ctx context.Context) error
 	Login(login string, pass string, ctx context.Context) (string, error)
 	CheckAuth(login string, ctx context.Context) (string, error)
@@ -115,12 +115,22 @@ func (h *Handler) CalculateThings(order string, c *gin.Context) {
 	bill, err := magic.Magic(order)
 	if err != nil {
 		h.repo.UpdateStatus(order, "INVALID", c)
+		log.Println(err)
 	}
 	floatBill, err := strconv.ParseFloat(bill, 64)
+	if err != nil {
+		h.repo.UpdateStatus(order, "INVALID", c)
+		log.Println(err)
+	}
 	//Начислить баллы
-	h.repo.UpdateWallet(order, floatBill, c)
+	err = h.repo.UpdateWallet(order, floatBill, c)
+	if err != nil {
+		h.repo.UpdateStatus(order, "INVALID", c)
+		log.Println(err)
+	}
 	//Изменить статус
-	h.repo.UpdateStatus(order, "PROCESSED", c)
+	err = h.repo.UpdateStatus(order, "PROCESSED", c)
+
 }
 func (h *Handler) HandlerRegister(c *gin.Context) {
 	log.Println("Register Start")
@@ -129,6 +139,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 80")
+		log.Println(err)
 		return
 	}
 	value := user{}
@@ -138,6 +149,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error  89")
+		log.Println(err)
 		return
 	}
 
@@ -158,6 +170,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
 		log.Println("Bad Request Error 116")
+		log.Println(err)
 		return
 	}
 	err = h.repo.Register(value.Login, value.Password, c)
@@ -198,6 +211,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 155")
+		log.Println(err)
 		return
 	}
 	//var results string
@@ -208,6 +222,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 165")
+		log.Println(err)
 		return
 	}
 
@@ -217,6 +232,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 174")
+		log.Println(err)
 		return
 	}
 	//if err := json.Unmarshal([]byte(body), &value); err != nil {
@@ -246,6 +262,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusInternalServerError, err)
 		log.Println("Server Error 203")
+		log.Println(err)
 		return
 	}
 	log.Println(results)
@@ -258,6 +275,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		log.Println("Server Error 215")
+		log.Println(err)
 		return
 	}
 	c.IndentedJSON(http.StatusOK, "Success Login")
@@ -270,6 +288,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
 	user, ok := store.Get("user")
@@ -284,6 +303,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 241")
+		log.Println(err)
 		return
 	}
 	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
@@ -319,6 +339,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 		} else {
 			c.IndentedJSON(http.StatusInternalServerError, err)
 			log.Println("Server Error 275")
+			log.Println(err)
 			return
 		}
 
@@ -333,6 +354,7 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println(err)
 		//log.Println("Server Error 227")
 		return
 	}
@@ -349,6 +371,7 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 	result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
 		return
 	}
 	if len(result) == 0 {
@@ -364,6 +387,7 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
 	user, ok := store.Get("user")
@@ -375,6 +399,7 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	result, err := h.repo.GetBalance(fmt.Sprintf("%v", user), c.Request.Context())
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
 		return
 	}
 	//if result.==nil{
@@ -414,6 +439,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
 	user, ok := store.Get("user")
@@ -430,6 +456,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error  89")
+		log.Println(err)
 		return
 	}
 	log.Println(body)
@@ -439,6 +466,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 434", err)
+		log.Println(err)
 		return
 	}
 
@@ -470,6 +498,7 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
 	user, ok := store.Get("user")
@@ -483,6 +512,7 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 	//result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
 		return
 	}
 	if len(result) == 0 {
@@ -499,6 +529,7 @@ func (h *Handler) HandlerGetInfo(c *gin.Context) {
 	result, err := h.repo.GetWithdraws(locOrder, c)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
 		return
 	}
 	c.JSON(http.StatusOK, result)
