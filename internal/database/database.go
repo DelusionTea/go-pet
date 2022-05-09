@@ -40,6 +40,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	sqlCreateOrdersDB := `CREATE TABLE IF NOT EXISTS orders (
 								id serial PRIMARY KEY,
 								owner VARCHAR NOT NULL,
+								order VARCHAR NOT NULL,
 								order_id uuid DEFAULT uuid_generate_v4 (), 	
 								status VARCHAR NOT NULL DEFAULT 'NEW', 
 								accurual VARCHAR,
