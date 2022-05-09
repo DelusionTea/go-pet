@@ -425,12 +425,13 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		log.Println("Server Error  89")
 		return
 	}
+	log.Println(body)
 
 	err = json.Unmarshal([]byte(body), &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-		log.Println("Server Error 104")
+		log.Println("Server Error 434", err)
 		return
 	}
 
