@@ -239,8 +239,8 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	user, ok := store.Get("user")
 	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil || (!ok) {
-		//c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		//return
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
 	}
 	defer c.Request.Body.Close()
 
@@ -324,8 +324,8 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil || (!ok) {
 
-		//c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		//return
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
 
 	}
 
