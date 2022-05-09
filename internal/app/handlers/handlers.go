@@ -133,15 +133,8 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		log.Println("Server Error  89")
 		return
 	}
-	//if err := json.Unmarshal([]byte(body), &value); err != nil {
-	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-	//	log.Println("Server Error")
-	//	return
-	//}
 
-	json.Unmarshal([]byte(body), &value)
-
-	//response, err := h.repo.AddURLs(c.Request.Context(), data, c.GetString("userId"))
+	err = json.Unmarshal([]byte(body), &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -403,6 +396,12 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	//401 — пользователь не авторизован.
 	//500 — внутренняя ошибка сервера.
 }
+
+type RequestWithdraw struct {
+	Order string `json:"order"`
+	Sum   int    `json:"sum"`
+}
+
 func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
@@ -416,7 +415,47 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	//h.repo.Withdraw()
+
+	value := RequestWithdraw{}
+	defer c.Request.Body.Close()
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error  89")
+		return
+	}
+
+	err = json.Unmarshal([]byte(body), &value)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 104")
+		return
+	}
+
+	if !luhn.Valid(string(value.Order)) {
+		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
+		return
+	}
+
+	err = h.repo.Withdraw(fmt.Sprintf("%v", user), []byte(value.Order), value.Sum, c)
+
+	if err != nil {
+		var ue *DBError
+		if errors.As(err, &ue) && (ue.Title == "402") {
+			c.IndentedJSON(http.StatusPaymentRequired, "PaymentRequired")
+			log.Println("Already here")
+			return
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, err)
+			log.Println("Server Error 452")
+			return
+		}
+
+	}
+	c.IndentedJSON(http.StatusOK, "Ok")
+
 	//Хендлер доступен только авторизованному пользователю. Номер заказа представляет собой гипотетический номер нового заказа пользователя, в счёт оплаты которого списываются баллы.
 	//	Примечание: для успешного списания достаточно успешной регистрации запроса, никаких внешних систем начисления не предусмотрено и не требуется реализовывать.
 	//	Формат запроса:
