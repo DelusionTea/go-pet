@@ -311,7 +311,6 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
-	result := []ResponseOrder{}
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -325,7 +324,7 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 		return
 	}
 
-	result, err = h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
+	result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)
 		return

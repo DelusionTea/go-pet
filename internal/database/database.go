@@ -198,20 +198,20 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 			return result, err
 		}
 		//result = append(result, u)
-		if u.Accrual != 0 {
-			result = append(result, handlers.ResponseOrder{
-				Order:      u.Order,
-				Status:     u.Status,
-				Accrual:    u.Accrual,
-				UploadedAt: u.UploadedAt,
-			})
-		} else {
-			result = append(result, handlers.ResponseOrder{
-				Order:      u.Order,
-				Status:     u.Status,
-				UploadedAt: u.UploadedAt,
-			})
-		}
+		//if u.Accrual != 0 {
+		result = append(result, handlers.ResponseOrder{
+			Order:      u.Order,
+			Status:     u.Status,
+			Accrual:    u.Accrual,
+			UploadedAt: u.UploadedAt,
+		})
+		//} else {
+		//	result = append(result, handlers.ResponseOrder{
+		//		Order:      u.Order,
+		//		Status:     u.Status,
+		//		UploadedAt: u.UploadedAt,
+		//	})
+		//}
 
 	}
 	return result, nil
