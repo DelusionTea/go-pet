@@ -446,7 +446,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		var ue *DBError
 		if errors.As(err, &ue) && (ue.Title == "402") {
 			c.IndentedJSON(http.StatusPaymentRequired, "PaymentRequired")
-			log.Println("Already here")
+			log.Println("PaymentRequired")
 			return
 		} else {
 			c.IndentedJSON(http.StatusInternalServerError, err)
