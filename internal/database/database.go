@@ -55,7 +55,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	log.Println("Create second TABLE")
 	sqlCreateWalletDB := `CREATE TABLE IF NOT EXISTS wallet (
 								id serial PRIMARY KEY,
-								owner VARCHAR NOT NULL, UNIQUE,
+								owner VARCHAR NOT NULL UNIQUE,
 								current_value double precision,
 								withdrawed integer,
 					);`
@@ -63,8 +63,8 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	sqlCreateWithdrawsDB := `CREATE TABLE IF NOT EXISTS withdraws (
 								id serial PRIMARY KEY,
 								sum_withdrawed integer NOT NULL,
-								order_temp VARCHAR NOT NULL, UNIQUE,
-								owner VARCHAR NOT NULL, UNIQUE,
+								order_temp VARCHAR NOT NULL UNIQUE,
+								owner VARCHAR NOT NULL UNIQUE,
 								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
 					);`
 	res4, err4 := db.ExecContext(ctx, sqlCreateWithdrawsDB)
