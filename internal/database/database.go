@@ -56,13 +56,13 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	sqlCreateWalletDB := `CREATE TABLE IF NOT EXISTS wallet (
 								id serial PRIMARY KEY,
 								owner VARCHAR NOT NULL UNIQUE,
-								current_value double precision,
-								withdrawed integer
+								current_value VARCHAR,
+								withdrawed VARCHAR
 					);`
 	res3, err3 := db.ExecContext(ctx, sqlCreateWalletDB)
 	sqlCreateWithdrawsDB := `CREATE TABLE IF NOT EXISTS withdraws (
 								id serial PRIMARY KEY,
-								sum_withdrawed integer NOT NULL,
+								sum_withdrawed integer ,
 								order_temp VARCHAR NOT NULL UNIQUE,
 								owner VARCHAR NOT NULL UNIQUE,
 								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
@@ -103,7 +103,8 @@ func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Cont
 	wallet.Scan(&result2.current)
 
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ANY ($2);`
-	_, err = db.conn.QueryContext(ctx, sqlSetStatus, result2.current+value, order)
+	s := fmt.Sprintf("%f", result2.current+value)
+	_, err = db.conn.QueryContext(ctx, sqlSetStatus, s, order)
 	if err != nil {
 		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)")
 		return err
@@ -176,7 +177,7 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 	sqlAddWallet := `INSERT INTO wallet (owner, current_value, withdrawed)
 				  VALUES ($1, $2, $3)`
 
-	_, err = db.conn.ExecContext(ctx, sqlAddWallet, login, 0, 0)
+	_, err = db.conn.ExecContext(ctx, sqlAddWallet, login, "0", "0")
 	log.Println("err is nil")
 	return err
 }
@@ -313,10 +314,11 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 	}
 	//increase wallet
 	current := result.current - float64(value)
-	withdrawed := float64(result.withdrawed) + value
+	withdrawed := fmt.Sprintf("%f", float64(result.withdrawed)+value)
 
 	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ANY ($3);`
-	_, err = db.conn.QueryContext(ctx, sqlUpdateWallet, current, withdrawed, login)
+	s := fmt.Sprintf("%f", current)
+	_, err = db.conn.QueryContext(ctx, sqlUpdateWallet, s, withdrawed, login)
 
 	if err != nil {
 		log.Println("err sqlUpdateWallet")
