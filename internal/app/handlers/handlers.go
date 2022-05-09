@@ -13,7 +13,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -116,14 +115,11 @@ func (h *Handler) CalculateThings(order string, c *gin.Context) {
 	if err != nil {
 		h.repo.UpdateStatus(order, "INVALID", c)
 		log.Println(err)
+		return
 	}
-	floatBill, err := strconv.ParseFloat(bill, 64)
-	if err != nil {
-		h.repo.UpdateStatus(order, "INVALID", c)
-		log.Println(err)
-	}
+
 	//Начислить баллы
-	err = h.repo.UpdateWallet(order, floatBill, c)
+	err = h.repo.UpdateWallet(order, bill, c)
 	if err != nil {
 		h.repo.UpdateStatus(order, "INVALID", c)
 		log.Println(err)
