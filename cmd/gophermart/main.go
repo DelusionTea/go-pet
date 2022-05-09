@@ -8,8 +8,8 @@ import (
 	"github.com/DelusionTea/go-pet.git/internal/app/middleware"
 	"github.com/DelusionTea/go-pet.git/internal/database"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
-	"github.com/go-session/redis/v3"
-	"github.com/go-session/session/v3"
+	"github.com/go-session/cookie"
+	"github.com/go-session/session"
 
 	"github.com/gin-gonic/gin"
 	"log"
@@ -18,14 +18,22 @@ import (
 	"os/signal"
 )
 
-var secret = []byte("secret")
+var (
+	hashKey = []byte("FF51A553-72FC-478B-9AEF-93D6F506DE91")
+)
 
 func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
 	session.InitManager(
-		session.SetStore(redis.NewRedisStore(&redis.Options{
-			Addr: conf.RedisAddress,
-			DB:   15,
-		})),
+		//session.SetStore(redis.NewRedisStore(&redis.Options{
+		//	Addr: conf.RedisAddress,
+		//	DB:   15,
+		//})),
+		session.SetStore(
+			cookie.NewCookieStore(
+				cookie.SetCookieName("demo_cookie_store_id"),
+				cookie.SetHashKey(hashKey),
+			),
+		),
 	)
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
 	router := gin.Default()
