@@ -38,7 +38,7 @@ type MarketInterface interface {
 	Login(login string, pass string, ctx context.Context) (string, error)
 	CheckAuth(login string, ctx context.Context) (string, error)
 	UploadOrder(login string, order []byte, ctx context.Context) error
-	GetOrder(status string, ctx context.Context)
+	GetOrder(login string, ctx context.Context) ([]ResponseOrder, error)
 	GetBalance(status string, ctx context.Context)
 	Withdraw(status string, ctx context.Context)
 	GetWithdraws(status string, ctx context.Context)
@@ -52,6 +52,12 @@ type user struct {
 type order struct {
 	Owner      string    `json:"login"`
 	Order      []byte    `json:"order"`
+	Status     string    `json:"status"`
+	Accrual    int       `json:"accrual"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+type ResponseOrder struct {
+	Order      string    `json:"order"`
 	Status     string    `json:"status"`
 	Accrual    int       `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
@@ -257,6 +263,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	//TEMP
 	if len(value.Order) < 15 {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
+		return
 
 	}
 	err = h.repo.UploadOrder(value.Owner, value.Order, c)
@@ -276,10 +283,12 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 			c.IndentedJSON(http.StatusConflict, "Conflict")
 			log.Println("Conflict")
 			return
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, err)
+			log.Println("Server Error 275")
+			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, err)
-		log.Println("Server Error 275")
-		return
+
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
 	log.Println("Accepted")
@@ -318,19 +327,17 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	//value := order{}
-	//value.Owner = c.GetString("userId")
-	//if value.Owner == "" {
-	//	c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
-	//	return
-	//}
-	//
-	//defer c.Request.Body.Close()
-	//
-	//body, err := ioutil.ReadAll(c.Request.Body)
-	////CHECK BODY VALUE
-	//value.Order = body
 
+	result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		return
+	}
+	if len(result) == 0 {
+		c.IndentedJSON(http.StatusNoContent, result)
+		return
+	}
+	c.IndentedJSON(http.StatusOK, result)
 	//	Хендлер доступен только авторизованному пользователю. Номера заказа в выдаче должны быть отсортированы по времени загрузки от самых старых к самым новым. Формат даты — RFC3339.
 	//		Доступные статусы обработки расчётов:
 	//	NEW — заказ загружен в систему, но не попал в обработку;

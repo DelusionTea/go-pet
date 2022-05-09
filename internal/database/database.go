@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
 	"log"
-	"time"
 )
 
 func NewDatabaseRepository(db *sql.DB) handlers.MarketInterface {
@@ -42,8 +41,8 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								owner VARCHAR NOT NULL,
 								order_temp VARCHAR NOT NULL,
 								order_id uuid DEFAULT uuid_generate_v4 (), 	
-								status VARCHAR NOT NULL DEFAULT 'NEW', 
-								accurual VARCHAR,
+								status VARCHAR, 
+								accurual VARCHAR DEFAULT '0',
 								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
 					);`
 	res2, err2 := db.ExecContext(ctx, sqlCreateOrdersDB)
@@ -64,12 +63,6 @@ type PGDataBase struct {
 	conn *sql.DB
 }
 
-type OrderInfo struct {
-	Order      string    `json:"order"`
-	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual"`
-	UploadedAt time.Time `json:"uploaded_at"`
-}
 type GetUserData struct {
 	login    string
 	password string
@@ -171,15 +164,35 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 		log.Println(err)
 	}
 
-	sqlAddOrder := `INSERT INTO orders (owner, order_temp)
-				  VALUES ($1, $2)`
+	sqlAddOrder := `INSERT INTO orders (owner, order_temp,status)
+				  VALUES ($1, $2, $3)`
 
-	_, err = db.conn.ExecContext(ctx, sqlAddOrder, login, order)
+	_, err = db.conn.ExecContext(ctx, sqlAddOrder, login, order, "NEW")
 
 	return err
 }
-func (db *PGDataBase) GetOrder(status string, ctx context.Context) {
-	return
+func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.ResponseOrder, error) {
+
+	result := []handlers.ResponseOrder{}
+	sqlGetOrder := `SELECT order_temp, status, accural, uploadet_at FROM urls WHERE owner=$1;`
+	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, login)
+	if err != nil {
+		return result, err
+	}
+	if rows.Err() != nil {
+		return result, rows.Err()
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var u handlers.ResponseOrder
+		err = rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)
+		if err != nil {
+			return result, err
+		}
+		result = append(result, u)
+	}
+	return result, nil
 }
 func (db *PGDataBase) GetBalance(status string, ctx context.Context) {
 	return
