@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/DelusionTea/go-pet.git/internal/luhn"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/go-session/session/v3"
-	"github.com/theplant/luhn"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -262,8 +261,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	value.Owner = fmt.Sprintf("%v", user)
 	value.Order = body
 
-	check, err := strconv.Atoi(string(value.Order))
-	if luhn.Valid(check) {
+	if luhn.Valid(string(value.Order)) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
 		return
 	}
