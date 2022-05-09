@@ -261,7 +261,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	value.Owner = fmt.Sprintf("%v", user)
 	value.Order = body
 
-	if luhn.Valid(string(value.Order)) {
+	if !luhn.Valid(string(value.Order)) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
 		return
 	}
