@@ -254,6 +254,11 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	value.Owner = fmt.Sprintf("%v", user)
 	value.Order = body
 
+	//TEMP
+	if len(value.Order) < 15 {
+		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
+
+	}
 	err = h.repo.UploadOrder(value.Owner, value.Order, c)
 	//200 — номер заказа уже был загружен этим пользователем;
 	//202 — новый номер заказа принят в обработку;
