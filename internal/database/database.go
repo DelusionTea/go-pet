@@ -40,7 +40,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	sqlCreateOrdersDB := `CREATE TABLE IF NOT EXISTS orders (
 								id serial PRIMARY KEY,
 								owner VARCHAR NOT NULL,
-								order VARCHAR NOT NULL,
+								order_temp VARCHAR NOT NULL,
 								order_id uuid DEFAULT uuid_generate_v4 (), 	
 								status VARCHAR NOT NULL DEFAULT 'NEW', 
 								accurual VARCHAR,
@@ -137,7 +137,7 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 }
 func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Context) error {
 	//Вначале селект. Если не пусто, то делаем проверку - если там другой пользак то alredy here, если другой то Conflict
-	sqlCheckOrder := `SELECT owner FROM orders WHERE order=$1 FETCH FIRST ROW ONLY;`
+	sqlCheckOrder := `SELECT owner FROM orders WHERE order_temp=$1 FETCH FIRST ROW ONLY;`
 
 	result := GetUserData{}
 	query := db.conn.QueryRowContext(ctx, sqlCheckOrder, order)
@@ -171,10 +171,10 @@ func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Contex
 		log.Println(err)
 	}
 
-	sqlAddUser := `INSERT INTO users (login, order)
+	sqlAddOrder := `INSERT INTO orders (owner, order_temp)
 				  VALUES ($1, $2)`
 
-	_, err = db.conn.ExecContext(ctx, sqlAddUser, login, order)
+	_, err = db.conn.ExecContext(ctx, sqlAddOrder, login, order)
 
 	return err
 }
