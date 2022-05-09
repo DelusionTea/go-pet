@@ -57,8 +57,9 @@ type order struct {
 	Accrual    int       `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
+
 type ResponseOrder struct {
-	Order      string    `json:"order"`
+	Order      string    `json:"number"`
 	Status     string    `json:"status"`
 	Accrual    int       `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
@@ -238,8 +239,8 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	user, ok := store.Get("user")
 	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil || (!ok) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
+		//c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		//return
 	}
 	defer c.Request.Body.Close()
 
@@ -312,16 +313,20 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
+
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		//log.Println("Server Error 227")
 		return
 	}
+
 	user, ok := store.Get("user")
 	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil || (!ok) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
+
+		//c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		//return
+
 	}
 
 	result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
@@ -386,8 +391,8 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	user, ok := store.Get("user")
 	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil || (!ok) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
+		//c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		//return
 	}
 	//Хендлер доступен только авторизованному пользователю. В ответе должны содержаться данные о текущей сумме баллов лояльности, а также сумме использованных за весь период регистрации баллов.
 	//	Формат запроса:
