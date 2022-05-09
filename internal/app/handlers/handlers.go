@@ -399,7 +399,7 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 
 type RequestWithdraw struct {
 	Order string `json:"order"`
-	Sum   int    `json:"sum"`
+	Sum   string `json:"sum"`
 }
 
 func (h *Handler) HandlerWithdraw(c *gin.Context) {
@@ -439,8 +439,8 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
 		return
 	}
-
-	err = h.repo.Withdraw(fmt.Sprintf("%v", user), []byte(value.Order), value.Sum, c)
+	i, err := strconv.Atoi(value.Sum)
+	err = h.repo.Withdraw(fmt.Sprintf("%v", user), []byte(value.Order), i, c)
 
 	if err != nil {
 		var ue *DBError
