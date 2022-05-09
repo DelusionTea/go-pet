@@ -57,7 +57,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								id serial PRIMARY KEY,
 								owner VARCHAR NOT NULL UNIQUE,
 								current_value double precision,
-								withdrawed integer,
+								withdrawed integer
 					);`
 	res3, err3 := db.ExecContext(ctx, sqlCreateWalletDB)
 	sqlCreateWithdrawsDB := `CREATE TABLE IF NOT EXISTS withdraws (
