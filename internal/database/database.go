@@ -292,14 +292,14 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 
 	return result, nil
 }
-func (db *PGDataBase) Withdraw(login string, order []byte, value int, ctx context.Context) error {
+func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx context.Context) error {
 	db.UploadOrder(login, order, ctx)
 
 	sqlGetWallet := `SELECT current_value, withdrawed FROM withdraws WHERE owner=$1;`
 	result := GetWalletData{}
 	query := db.conn.QueryRowContext(ctx, sqlGetWallet, login)
 	err := query.Scan(&result.current, &result.withdrawed) //or how check empty value?
-	if value > int(result.current) {
+	if value > result.current {
 		//402 — на счету недостаточно средств;
 		return handlers.NewErrorWithDB(errors.New("402"), "402")
 	}
@@ -313,7 +313,7 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value int, ctx contex
 	}
 	//increase wallet
 	current := result.current - float64(value)
-	withdrawed := result.withdrawed + value
+	withdrawed := float64(result.withdrawed) + value
 
 	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ANY ($3);`
 	_, err = db.conn.QueryContext(ctx, sqlUpdateWallet, current, withdrawed, login)

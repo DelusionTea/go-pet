@@ -43,7 +43,7 @@ type MarketInterface interface {
 	UploadOrder(login string, order []byte, ctx context.Context) error
 	GetOrder(login string, ctx context.Context) ([]ResponseOrder, error)
 	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
-	Withdraw(login string, order []byte, value int, ctx context.Context) error
+	Withdraw(login string, order []byte, value float64, ctx context.Context) error
 	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
 	UpdateWallet(order string, value float64, ctx context.Context) error
 }
@@ -398,8 +398,8 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 }
 
 type RequestWithdraw struct {
-	Order string `json:"order"`
-	Sum   string `json:"sum"`
+	Order string  `json:"order"`
+	Sum   float64 `json:"sum"`
 }
 
 func (h *Handler) HandlerWithdraw(c *gin.Context) {
@@ -439,8 +439,8 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
 		return
 	}
-	i, err := strconv.Atoi(value.Sum)
-	err = h.repo.Withdraw(fmt.Sprintf("%v", user), []byte(value.Order), i, c)
+	//i, err := strconv.Atoi(value.Sum)
+	err = h.repo.Withdraw(fmt.Sprintf("%v", user), []byte(value.Order), value.Sum, c)
 
 	if err != nil {
 		var ue *DBError
