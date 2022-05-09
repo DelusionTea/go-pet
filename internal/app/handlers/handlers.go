@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/DelusionTea/go-pet.git/internal/app/magic"
 	"github.com/DelusionTea/go-pet.git/internal/luhn"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -34,15 +36,16 @@ func NewErrorWithDB(err error, title string) error {
 }
 
 type MarketInterface interface {
-	UpdateStatus(status string, ctx context.Context)
+	UpdateStatus(order string, status string, ctx context.Context)
 	Register(login string, pass string, ctx context.Context) error
 	Login(login string, pass string, ctx context.Context) (string, error)
 	CheckAuth(login string, ctx context.Context) (string, error)
 	UploadOrder(login string, order []byte, ctx context.Context) error
 	GetOrder(login string, ctx context.Context) ([]ResponseOrder, error)
-	GetBalance(status string, ctx context.Context)
-	Withdraw(status string, ctx context.Context)
-	GetWithdraws(status string, ctx context.Context)
+	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
+	Withdraw(login string, order []byte, value int, ctx context.Context) error
+	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
+	UpdateWallet(order string, value float64, ctx context.Context) error
 }
 type user struct {
 	Login    string `json:"login"`
@@ -65,6 +68,21 @@ type ResponseOrder struct {
 	UploadedAt time.Time `json:"uploaded_at"`
 }
 
+//type ResponseWithdraw struct {
+//	Current   float64 `json:"current"`
+//	Withdrawn int     `json:"withdrawn"`
+//}
+
+type ResponseWithdraws struct {
+	Order       string    `json:"order"`
+	Sum         int       `json:"sum"`
+	ProcessedAt time.Time `json:"processed_at"`
+}
+type BalanceResponse struct {
+	Current   float64 `json:"current"`
+	Withdrawn int     `json:"withdrawn"`
+}
+
 type Handler struct {
 	repo          MarketInterface
 	serverAddress string
@@ -78,7 +96,25 @@ func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handl
 		wp:            *wp,
 	}
 }
+func (h *Handler) CalculateThings(order string, c *gin.Context) {
+	//Принять заказ и изменить статус на "в обработке"
+	h.repo.UpdateStatus(order, "PROCESSING", c)
+	//NEW — заказ загружен в систему, но не попал в обработку;
+	//PROCESSING — вознаграждение за заказ рассчитывается;
+	//INVALID — система расчёта вознаграждений отказала в расчёте;
+	//PROCESSED — данные по заказу проверены и информация о расчёте успешно получена.
 
+	//Сделать магию
+	bill, err := magic.Magic(order)
+	if err != nil {
+		h.repo.UpdateStatus(order, "INVALID", c)
+	}
+	floatBill, err := strconv.ParseFloat(bill, 64)
+	//Начислить баллы
+	h.repo.UpdateWallet(order, floatBill, c)
+	//Изменить статус
+	h.repo.UpdateStatus(order, "PROCESSED", c)
+}
 func (h *Handler) HandlerRegister(c *gin.Context) {
 	log.Println("Register Start")
 	//session := sessions.Default(c)
@@ -289,26 +325,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
 	log.Println("Accepted")
-
-	//CHECK BODY VALUE!!!!
-
-	//user := user{}
-	//h.repo.CheckAuth(user.Login, c)
-	//Номер заказа может быть проверен на корректность ввода с помощью алгоритма Луна.
-	//	Формат запроса:
-	//POST /api/user/orders HTTP/1.1
-	//Content-Type: text/plain
-	//...
-	//
-	//12345678903
-	//Возможные коды ответа:
-	//200 — номер заказа уже был загружен этим пользователем;
-	//202 — новый номер заказа принят в обработку;
-	//!!!400 — неверный формат запроса;
-	//+++401 — пользователь не аутентифицирован;
-	//409 — номер заказа уже был загружен другим пользователем;
-	//!!!!!!!!!!!!!!422 — неверный формат номера заказа;!!!!!!!!!!!!!!!!!
-	//500 — внутренняя ошибка сервера.
+	h.CalculateThings(string(value.Order), c)
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
@@ -339,47 +356,8 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 		return
 	}
 	log.Println(result)
-	//txBz, err := json.Marshal(result)
-	//log.Println(txBz)
+
 	c.JSON(http.StatusOK, result)
-	//	Хендлер доступен только авторизованному пользователю. Номера заказа в выдаче должны быть отсортированы по времени загрузки от самых старых к самым новым. Формат даты — RFC3339.
-	//		Доступные статусы обработки расчётов:
-	//	NEW — заказ загружен в систему, но не попал в обработку;
-	//	PROCESSING — вознаграждение за заказ рассчитывается;
-	//	INVALID — система расчёта вознаграждений отказала в расчёте;
-	//	PROCESSED — данные по заказу проверены и информация о расчёте успешно получена.
-	//		Формат запроса:
-	//	GET /api/user/orders HTTP/1.1
-	//	Content-Length: 0
-	//	Возможные коды ответа:
-	//	200 — успешная обработка запроса.
-	//		Формат ответа:
-	//	200 OK HTTP/1.1
-	//	Content-Type: application/json
-	//	...
-	//
-	//[
-	//	{
-	//	"number": "9278923470",
-	//	"status": "PROCESSED",
-	//	"accrual": 500,
-	//	"uploaded_at": "2020-12-10T15:15:45+03:00"
-	//	},
-	//	{
-	//	"number": "12345678903",
-	//	"status": "PROCESSING",
-	//	"uploaded_at": "2020-12-10T15:12:01+03:00"
-	//	},
-	//	{
-	//	"number": "346436439",
-	//	"status": "INVALID",
-	//	"uploaded_at": "2020-12-09T16:09:53+03:00"
-	//	}
-	//	]
-	//
-	//	204 — нет данных для ответа.
-	//	401 — пользователь не авторизован.
-	//	500 — внутренняя ошибка сервера
 }
 func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
@@ -391,9 +369,21 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 	user, ok := store.Get("user")
 	log.Println("user is......", fmt.Sprintf("%v", user))
 	if user == nil || (!ok) {
-		//c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		//return
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
 	}
+	result, err := h.repo.GetBalance(fmt.Sprintf("%v", user), c.Request.Context())
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		return
+	}
+	//if result.==nil{
+	//	c.IndentedJSON(http.StatusNoContent, result)
+	//	return
+	//}
+	log.Println(result)
+
+	c.JSON(http.StatusOK, result)
 	//Хендлер доступен только авторизованному пользователю. В ответе должны содержаться данные о текущей сумме баллов лояльности, а также сумме использованных за весь период регистрации баллов.
 	//	Формат запроса:
 	//GET /api/user/balance HTTP/1.1
@@ -426,6 +416,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	//h.repo.Withdraw()
 	//Хендлер доступен только авторизованному пользователю. Номер заказа представляет собой гипотетический номер нового заказа пользователя, в счёт оплаты которого списываются баллы.
 	//	Примечание: для успешного списания достаточно успешной регистрации запроса, никаких внешних систем начисления не предусмотрено и не требуется реализовывать.
 	//	Формат запроса:
