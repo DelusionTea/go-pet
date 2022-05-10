@@ -83,7 +83,7 @@ type GetUserData struct {
 	authed   bool
 }
 
-func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Context) error {
+func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Context) error {
 	log.Println("Start Update Wallet order:", order)
 
 	log.Println("Find owner of order:")
@@ -119,7 +119,7 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 	return nil
 }
 
-func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Context) error {
+func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Context) error {
 	log.Println("Start UpdateStatus order:", order)
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
@@ -130,7 +130,7 @@ func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Cont
 	log.Println("Good End UpdateStatus")
 	return nil
 }
-func (db *PGDataBase) UpdateAccural(order []byte, accural string, ctx context.Context) error {
+func (db *PGDataBase) UpdateAccural(order string, accural string, ctx context.Context) error {
 	log.Println("Start UpdateStatus order:", order)
 	sqlSetAccural := `UPDATE orders SET accural = ($1) WHERE order_temp = ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetAccural, accural, order)
@@ -201,7 +201,7 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 	log.Println("err is nil")
 	return err
 }
-func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Context) error {
+func (db *PGDataBase) UploadOrder(login string, order string, ctx context.Context) error {
 	sqlCheckOrder := `SELECT owner FROM orders WHERE order_temp=$1 FETCH FIRST ROW ONLY;`
 
 	result := GetUserData{}
@@ -311,7 +311,7 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 
 	return result, nil
 }
-func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx context.Context) error {
+func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx context.Context) error {
 	db.UploadOrder(login, order, ctx)
 
 	sqlGetWallet := `SELECT current_value, withdrawed FROM wallet WHERE owner=$1;`
@@ -356,7 +356,7 @@ type OrderInfoString struct {
 	Accrual string
 }
 
-func (db *PGDataBase) GetOrderInfo(order []byte, ctx context.Context) (handlers.ResponseOrderInfo, error) {
+func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.ResponseOrderInfo, error) {
 	result := handlers.ResponseOrderInfo{}
 
 	sqlGetOrder := `SELECT order_temp, status, accural FROM orders WHERE order_temp=($1);`

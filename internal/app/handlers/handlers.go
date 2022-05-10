@@ -18,18 +18,18 @@ import (
 
 //const userkey = "user"
 type MarketInterface interface {
-	UpdateStatus(order []byte, status string, ctx context.Context) error
+	UpdateStatus(order string, status string, ctx context.Context) error
 	Register(login string, pass string, ctx context.Context) error
 	Login(login string, pass string, ctx context.Context) (string, error)
 	CheckAuth(login string, ctx context.Context) (string, error)
-	UploadOrder(login string, order []byte, ctx context.Context) error
+	UploadOrder(login string, order string, ctx context.Context) error
 	GetOrder(login string, ctx context.Context) ([]ResponseOrder, error)
 	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
-	Withdraw(login string, order []byte, value float64, ctx context.Context) error
+	Withdraw(login string, order string, value float64, ctx context.Context) error
 	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
-	UpdateWallet(order []byte, value float64, ctx context.Context) error
-	GetOrderInfo(order []byte, ctx context.Context) (ResponseOrderInfo, error)
-	UpdateAccural(order []byte, accural string, ctx context.Context) error
+	UpdateWallet(order string, value float64, ctx context.Context) error
+	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
+	UpdateAccural(order string, accural string, ctx context.Context) error
 }
 type user struct {
 	Login    string `json:"login"`
@@ -39,7 +39,7 @@ type user struct {
 
 type order struct {
 	Owner      string    `json:"login"`
-	Order      []byte    `json:"order"`
+	Order      string    `json:"order"`
 	Status     string    `json:"status"`
 	Accrual    int       `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
@@ -102,7 +102,7 @@ func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handl
 	}
 }
 
-func (h *Handler) CalculateThings(order []byte, c *gin.Context) {
+func (h *Handler) CalculateThings(order string, c *gin.Context) {
 	log.Println("start celculate things order: ", order)
 	//Принять заказ и изменить статус на "в обработке"
 	h.repo.UpdateStatus(order, "PROCESSING", c)
@@ -166,7 +166,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		return
 	}
 
-	err = json.Unmarshal([]byte(body), &value)
+	err = json.Unmarshal(body, &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -226,7 +226,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		return
 	}
 
-	json.Unmarshal([]byte(body), &value)
+	json.Unmarshal(body, &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -297,7 +297,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 
 	value := order{}
 	value.Owner = fmt.Sprintf("%v", user)
-	value.Order = body
+	value.Order = string(body)
 
 	if !luhn.Valid(string(value.Order)) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
@@ -418,7 +418,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 	}
 	log.Println(body)
 
-	err = json.Unmarshal([]byte(body), &value)
+	err = json.Unmarshal(body, &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -432,7 +432,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		return
 	}
 	log.Println("call db Withdraw")
-	err = h.repo.Withdraw(fmt.Sprintf("%v", user), []byte(value.Order), value.Sum, c)
+	err = h.repo.Withdraw(fmt.Sprintf("%v", user), string(value.Order), value.Sum, c)
 
 	if err != nil {
 		var ue *DBError
@@ -479,6 +479,7 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 		log.Println("len(res) is nil")
 		return
 	}
+	log.Println("WITHDRAWS:")
 	log.Println(result)
 
 	c.JSON(http.StatusOK, result)

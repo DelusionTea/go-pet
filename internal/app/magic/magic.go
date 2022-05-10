@@ -5,7 +5,7 @@ import (
 )
 
 //Вызывается, после успешной регистрации
-func Magic(order []byte) (float64, error) {
+func Magic(order string) (float64, error) {
 	//log.Println("Call Magic func - it's pretty. Order is: ", order)
 	////Сделать магию
 	//var magicSolt = 5.4
