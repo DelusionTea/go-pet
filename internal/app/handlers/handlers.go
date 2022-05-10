@@ -111,13 +111,13 @@ type ResponseAccural struct {
 	Accrual int    `json:"accrual"`
 }
 
-func (h *Handler) AccrualAskWorker(co *gin.Context) {
-
-	c := time.Tick(time.Second)
-	for range c {
-		go h.AccrualAskWorkerRunner(co)
-	}
-}
+//func (h *Handler) AccrualAskWorker(co *gin.Context) {
+//
+//	c := time.Tick(time.Second)
+//	for range c {
+//		go h.AccrualAskWorkerRunner(co)
+//	}
+//}
 func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 	order, err := h.repo.GetNewOrder(c)
 	if err != nil {
@@ -311,7 +311,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		log.Println(err.Error())
 		return
 	}
-	go h.AccrualAskWorker(c)
+	go h.AccrualAskWorkerRunner(c)
 	return
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
