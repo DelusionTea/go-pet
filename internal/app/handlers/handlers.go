@@ -129,7 +129,10 @@ func (h *Handler) CalculateThings(order string, c *gin.Context) {
 		}
 
 		err = json.Unmarshal(body, &value)
-
+		log.Println("body: ", body)
+		log.Println("status is:", &value.Status)
+		log.Println("accrual is:", &value.Accrual)
+		log.Println("order is:", &value.Order)
 		if value.Status == "PROCESSING" {
 			h.repo.UpdateStatus(order, "PROCESSING", c)
 			log.Println("UpdateStatus(order, \"INVALID\"")
