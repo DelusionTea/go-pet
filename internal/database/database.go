@@ -454,16 +454,8 @@ func (db *PGDataBase) GetNewOrder(ctx context.Context) (string, error) {
 
 	var order string
 	sqlGetNewOrder := `SELECT order_temp FROM orders WHERE status in('PROCESSING', 'NEW') ORDER BY random() LIMIT 1;`
-	row, err := db.conn.QueryContext(ctx, sqlGetNewOrder)
-	if err = row.Scan(&order); err != nil {
-		log.Fatal(err)
-	}
-	for row.Next() {
-
-		if err := row.Scan(&order); err != nil {
-			log.Fatal(err)
-		}
-	}
+	row := db.conn.QueryRowContext(ctx, sqlGetNewOrder)
+	row.Scan(&order)
 
 	return order, nil
 }
