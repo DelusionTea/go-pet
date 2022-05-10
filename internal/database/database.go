@@ -278,7 +278,7 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 			return result, handlers.NewErrorWithDB(errors.New("GetOrder"), "GetOrder")
 		}
 		//result = append(result, u)
-		intAccrual, err := strconv.Atoi(u.Accrual)
+		intAccrual, err := strconv.ParseFloat(u.Accrual, 32)
 		if err != nil {
 			log.Println("err  Atoi")
 			return result, err
@@ -287,7 +287,7 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 			result = append(result, handlers.ResponseOrder{
 				Order:      u.Order,
 				Status:     u.Status,
-				Accrual:    intAccrual,
+				Accrual:    int(intAccrual),
 				UploadedAt: u.UploadedAt,
 			})
 		} else {
@@ -428,14 +428,16 @@ func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handler
 			log.Println("err  rows.Scan(&u.Order, &u.Sum,&u.ProcessedAt)")
 			return result, handlers.NewErrorWithDB(errors.New("ResponseWithdraws"), "ResponseWithdraws")
 		}
-		intSum, err := strconv.Atoi(u.Sum)
+		//intAccrual, err := strconv.ParseFloat(u.Accrual,32)
+		intSum, err := strconv.ParseFloat(u.Sum, 32)
+
 		if err != nil {
 			log.Println("err  Atoi")
 			return result, err
 		}
 		result = append(result, handlers.ResponseWithdraws{
 			Order:       u.Order,
-			Sum:         intSum,
+			Sum:         int(intSum),
 			ProcessedAt: u.ProcessedAt,
 		})
 
