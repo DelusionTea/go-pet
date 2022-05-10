@@ -10,6 +10,7 @@ import (
 	"github.com/lib/pq"
 	"log"
 	"strconv"
+	"time"
 )
 
 type GetWalletData struct {
@@ -245,6 +246,14 @@ func (db *PGDataBase) UploadOrder(login string, order string, ctx context.Contex
 
 	return err
 }
+
+type RespOrder struct {
+	Order      string
+	Status     string
+	Accrual    string
+	UploadedAt time.Time
+}
+
 func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.ResponseOrder, error) {
 
 	result := []handlers.ResponseOrder{}
@@ -262,18 +271,23 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 	defer rows.Close()
 
 	for rows.Next() {
-		var u handlers.ResponseOrder
+		var u RespOrder
 		err = rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)
 		if err != nil {
 			log.Println("err  rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)")
 			return result, handlers.NewErrorWithDB(errors.New("GetOrder"), "GetOrder")
 		}
 		//result = append(result, u)
-		if u.Accrual != 0 {
+		intAccrual, err := strconv.Atoi(u.Accrual)
+		if err != nil {
+			log.Println("err  Atoi")
+			return result, err
+		}
+		if u.Accrual != "0" {
 			result = append(result, handlers.ResponseOrder{
 				Order:      u.Order,
 				Status:     u.Status,
-				Accrual:    u.Accrual,
+				Accrual:    intAccrual,
 				UploadedAt: u.UploadedAt,
 			})
 		} else {
@@ -386,11 +400,12 @@ func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.
 	return result, nil
 }
 
-//type ResponseWithdrawsLocal struct{
-//	Order string
-//	Sum:         u.Sum,
-//	ProcessedAt: u.ProcessedAt,
-//}
+type ResponseWithdrawsLocal struct {
+	Order       string
+	Sum         string
+	ProcessedAt time.Time
+}
+
 func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handlers.ResponseWithdraws, error) {
 	result := []handlers.ResponseWithdraws{}
 
@@ -407,16 +422,20 @@ func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handler
 	defer rows.Close()
 
 	for rows.Next() {
-		var u handlers.ResponseWithdraws
+		var u ResponseWithdrawsLocal
 		err = rows.Scan(&u.Order, &u.Sum, &u.ProcessedAt)
 		if err != nil {
 			log.Println("err  rows.Scan(&u.Order, &u.Sum,&u.ProcessedAt)")
 			return result, handlers.NewErrorWithDB(errors.New("ResponseWithdraws"), "ResponseWithdraws")
 		}
-		//intSum, err := strconv.Atoi(u.Sum)
+		intSum, err := strconv.Atoi(u.Sum)
+		if err != nil {
+			log.Println("err  Atoi")
+			return result, err
+		}
 		result = append(result, handlers.ResponseWithdraws{
 			Order:       u.Order,
-			Sum:         u.Sum,
+			Sum:         intSum,
 			ProcessedAt: u.ProcessedAt,
 		})
 
