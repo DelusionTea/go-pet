@@ -83,16 +83,16 @@ type GetUserData struct {
 }
 
 func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Context) error {
-	sqlGetUser := `SELECT owner FROM orders WHERE order_temp=$1 FETCH FIRST ROW ONLY;`
+	sqlGetUser := `SELECT owner FROM orders WHERE order_temp=$1;`
 	user, err := db.conn.QueryContext(ctx, sqlGetUser, order)
 	if err != nil {
-		log.Println("err db.conn.QueryContext(ctx, sqlGetUser, status, order)")
+		log.Println("err db.conn.QueryContext(ctx, sqlGetUser, order)")
 		return err
 	}
 	result := GetUserData{}
 	user.Scan(&result.login)
 
-	sqlGetWallet := `SELECT current_value FROM wallet WHERE owner=$1 FETCH FIRST ROW ONLY;`
+	sqlGetWallet := `SELECT current_value FROM wallet WHERE owner=$1;`
 	wallet, err := db.conn.QueryContext(ctx, sqlGetWallet, &result.login)
 	if err != nil {
 		log.Println("err db.conn.QueryContext(ctx, sqlGetUser, status, order)")
@@ -178,6 +178,10 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 				  VALUES ($1, $2, $3)`
 
 	_, err = db.conn.ExecContext(ctx, sqlAddWallet, login, "0", "0")
+	if err != nil {
+		log.Println("err db.conn.180 Reg ", err)
+		return err
+	}
 	log.Println("err is nil")
 	return err
 }
