@@ -82,7 +82,7 @@ type GetUserData struct {
 	authed   bool
 }
 
-func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Context) error {
+func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Context) error {
 	sqlGetUser := `SELECT owner FROM orders WHERE order_temp=$1;`
 	user, err := db.conn.QueryContext(ctx, sqlGetUser, order)
 	if err != nil {
@@ -112,7 +112,7 @@ func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Cont
 	return nil
 }
 
-func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Context) error {
+func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Context) error {
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ANY ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
 	if err != nil {
@@ -332,7 +332,7 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 	//422 — неверный номер заказа;
 	return nil
 }
-func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.ResponseOrderInfo, error) {
+func (db *PGDataBase) GetOrderInfo(order []byte, ctx context.Context) (handlers.ResponseOrderInfo, error) {
 	result := handlers.ResponseOrderInfo{}
 
 	sqlGetOrder := `SELECT order_temp, status, accural FROM orders WHERE order_temp=($1);`

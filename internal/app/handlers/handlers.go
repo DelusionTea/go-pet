@@ -35,7 +35,7 @@ func NewErrorWithDB(err error, title string) error {
 }
 
 type MarketInterface interface {
-	UpdateStatus(order string, status string, ctx context.Context) error
+	UpdateStatus(order []byte, status string, ctx context.Context) error
 	Register(login string, pass string, ctx context.Context) error
 	Login(login string, pass string, ctx context.Context) (string, error)
 	CheckAuth(login string, ctx context.Context) (string, error)
@@ -44,8 +44,8 @@ type MarketInterface interface {
 	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
 	Withdraw(login string, order []byte, value float64, ctx context.Context) error
 	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
-	UpdateWallet(order string, value float64, ctx context.Context) error
-	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
+	UpdateWallet(order []byte, value float64, ctx context.Context) error
+	GetOrderInfo(order []byte, ctx context.Context) (ResponseOrderInfo, error)
 }
 type user struct {
 	Login    string `json:"login"`
@@ -102,7 +102,7 @@ func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handl
 		wp:            *wp,
 	}
 }
-func (h *Handler) CalculateThings(order string, c *gin.Context) {
+func (h *Handler) CalculateThings(order []byte, c *gin.Context) {
 	//Принять заказ и изменить статус на "в обработке"
 	h.repo.UpdateStatus(order, "PROCESSING", c)
 	//NEW — заказ загружен в систему, но не попал в обработку;
@@ -302,15 +302,8 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 		log.Println(err)
 		return
 	}
-	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
+
 	value := order{}
-	//value.Owner, err = c.Cookie("user")
-	//log.Println("value.Owner:  ", value.Owner)
-	//if err != nil {
-	//	log.Println("value.Owner:  ", value.Owner, "  we have error - empty")
-	//	c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
-	//	return
-	//}
 	value.Owner = fmt.Sprintf("%v", user)
 	value.Order = body
 
@@ -342,7 +335,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
 	log.Println("Accepted")
-	h.CalculateThings(string(value.Order), c)
+	h.CalculateThings(value.Order, c)
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
