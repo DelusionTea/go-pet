@@ -105,11 +105,12 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 	}
 	result2 := GetWalletData{}
 	wallet.Scan(&result2.current)
-	log.Println("Current value: ", &result2.current)
+
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
 	f, err := strconv.ParseFloat(result2.current, 64)
 	s := fmt.Sprintf("%f", f+value)
 	log.Println("s: ", s)
+	log.Println("Current value: ", s)
 	_, err = db.conn.QueryContext(ctx, sqlSetStatus, s, order)
 	if err != nil {
 		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)", err)
@@ -122,6 +123,17 @@ func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Cont
 	log.Println("Start UpdateStatus order:", order)
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
+	if err != nil {
+		log.Println("err UpdateStatus", err)
+		return err
+	}
+	log.Println("Good End UpdateStatus")
+	return nil
+}
+func (db *PGDataBase) UpdateAccural(order []byte, accural string, ctx context.Context) error {
+	log.Println("Start UpdateStatus order:", order)
+	sqlSetStatus := `UPDATE orders SET accural = ($1) WHERE order_temp = ($2);`
+	_, err := db.conn.QueryContext(ctx, sqlSetStatus, accural, order)
 	if err != nil {
 		log.Println("err UpdateStatus", err)
 		return err
