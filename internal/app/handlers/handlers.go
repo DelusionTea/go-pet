@@ -26,7 +26,7 @@ type MarketInterface interface {
 	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
 	Withdraw(login string, order string, value float64, ctx context.Context) error
 	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
-	UpdateWallet(order string, value float64, ctx context.Context) error
+	UpdateWallet(order string, value float32, ctx context.Context) error
 	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
 	UpdateAccural(order string, accural string, ctx context.Context) error
 	GetNewOrder(ctx context.Context) (string, error)
@@ -110,12 +110,12 @@ type ResponseAccural struct {
 	Accrual float32 `json:"accrual"`
 }
 
-//func (h *Handler) AccrualAskWorker(co *gin.Context) {
-//	c := time.Tick(time.Second)
-//	for range c {
-//		go h.AccrualAskWorkerRunner(co)
-//	}
-//}
+func (h *Handler) AccrualAskWorker(co *gin.Context) {
+	c := time.Tick(time.Second)
+	for range c {
+		go h.AccrualAskWorkerRunner(co)
+	}
+}
 func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 	log.Println("START FUCKIG ROUTINE")
 	order, err := h.repo.GetNewOrder(c)
@@ -126,8 +126,11 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 		return
 	}
 	log.Println("ORDER OF FUCKIG ROUTINE is ", order)
+
 	if order != "" {
+
 		log.Println("start celculate things order: ", order)
+
 		//Принять заказ и изменить статус на "в обработке"
 		value := ResponseAccural{}
 		url := "http://" + h.accuralURL + "/api/orders/" + order
@@ -170,14 +173,14 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 
 		//Начислить баллы
 		log.Println("Start Update Wallet")
-		err := h.repo.UpdateWallet(order, float64(value.Accrual), c)
+		err := h.repo.UpdateWallet(order, value.Accrual, c)
 		if err != nil {
 			h.repo.UpdateStatus(order, "INVALID", c)
 			log.Println("UpdateStatus(order, \"INVALID\"")
 			log.Println(err)
 			return
 		}
-		//Изменить статус
+		//Изменить Accural
 		s := fmt.Sprintf("%f", value.Accrual)
 		err = h.repo.UpdateAccural(order, s, c)
 		log.Println("UpdateAccural")
@@ -240,7 +243,7 @@ func (h *Handler) CalculateThings(order string, c *gin.Context) {
 
 		//Начислить баллы
 		log.Println("Start Update Wallet")
-		err := h.repo.UpdateWallet(order, float64(value.Accrual), c)
+		err := h.repo.UpdateWallet(order, value.Accrual, c)
 		if err != nil {
 			h.repo.UpdateStatus(order, "INVALID", c)
 			log.Println("UpdateStatus(order, \"INVALID\"")
@@ -444,7 +447,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
 	h.CalculateThings(value.Order, c)
-	go h.AccrualAskWorkerRunner(c)
+	go h.AccrualAskWorker(c)
 	//h.AccrualAskWorkerRunner(c)
 	log.Println("Accepted")
 	//go h.AccrualAskWorker(c)

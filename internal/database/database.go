@@ -84,32 +84,22 @@ type GetUserData struct {
 	authed   bool
 }
 
-func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Context) error {
+func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Context) error {
 	log.Println("Start Update Wallet order:", order)
 
 	log.Println("Find owner of order:")
 	sqlGetUser := `SELECT owner FROM orders WHERE order_temp=$1;`
-	user, err := db.conn.QueryContext(ctx, sqlGetUser, order)
-	if err != nil {
-		log.Println("err UpdateWallet", err)
-		return err
-	}
+	user := db.conn.QueryRowContext(ctx, sqlGetUser, order)
 	result := GetUserData{}
 
-	for user.Next() {
-		if err := user.Scan(&result.login); err != nil {
-			log.Fatal(err)
-		}
+	if err := user.Scan(&result.login); err != nil {
+		log.Fatal(err)
 	}
 
 	log.Println("Owner is::", &result.login)
 	log.Println("Find current value:")
 	sqlGetWallet := `SELECT current_value FROM wallet WHERE owner=$1;`
 	wallet := db.conn.QueryRowContext(ctx, sqlGetWallet, &result.login)
-	if err != nil {
-		log.Println("err find cur value", err)
-		return err
-	}
 	result2 := GetWalletData{}
 
 	if err := wallet.Scan(&result2.current); err != nil {
@@ -117,8 +107,8 @@ func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Cont
 	}
 
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
-	f, err := strconv.ParseFloat(result2.current, 64)
-	s := fmt.Sprintf("%f", f+value)
+	f, err := strconv.ParseFloat(result2.current, 32)
+	s := fmt.Sprintf("%f", float32(f)+value)
 	log.Println("s: ", s)
 	log.Println("Current value: ", s)
 	_, err = db.conn.QueryContext(ctx, sqlSetStatus, s, order)
