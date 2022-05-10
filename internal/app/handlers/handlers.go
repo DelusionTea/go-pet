@@ -119,6 +119,7 @@ type ResponseAccural struct {
 //	}
 //}
 func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
+	log.Println("START FUCKIG ROUTINE")
 	order, err := h.repo.GetNewOrder(c)
 	if err != nil {
 		//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -126,6 +127,7 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 		log.Println(err)
 		return
 	}
+	log.Println("ORDER OF FUCKIG ROUTINE is ", order)
 	if order != "" {
 		log.Println("start celculate things order: ", order)
 		//Принять заказ и изменить статус на "в обработке"

@@ -95,17 +95,26 @@ func (db *PGDataBase) UpdateWallet(order string, value float64, ctx context.Cont
 		return err
 	}
 	result := GetUserData{}
-	user.Scan(&result.login)
+
+	for user.Next() {
+		if err := user.Scan(&result.login); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	log.Println("Owner is::", &result.login)
 	log.Println("Find current value:")
 	sqlGetWallet := `SELECT current_value FROM wallet WHERE owner=$1;`
-	wallet, err := db.conn.QueryContext(ctx, sqlGetWallet, &result.login)
+	wallet := db.conn.QueryRowContext(ctx, sqlGetWallet, &result.login)
 	if err != nil {
 		log.Println("err find cur value", err)
 		return err
 	}
 	result2 := GetWalletData{}
-	wallet.Scan(&result2.current)
+
+	if err := wallet.Scan(&result2.current); err != nil {
+		log.Fatal(err)
+	}
 
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
 	f, err := strconv.ParseFloat(result2.current, 64)
@@ -147,7 +156,9 @@ func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (str
 	sqlGetUser := `SELECT login,password FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
 	query := db.conn.QueryRowContext(ctx, sqlGetUser, login)
 	result := GetUserData{}
+
 	query.Scan(&result.login, &result.password)
+
 	if result.login == "" {
 		return "", handlers.NewErrorWithDB(errors.New("not found"), "user not found")
 	}
@@ -305,14 +316,10 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 	result := handlers.BalanceResponse{}
 	sqlGetBalance := `SELECT current_value, withdrawed FROM wallet WHERE owner=$1;`
 
-	query, err := db.conn.QueryContext(ctx, sqlGetBalance, login)
-	if err != nil {
-		log.Println("err db.conn.QueryContext")
-		return result, err
-	}
+	query := db.conn.QueryRowContext(ctx, sqlGetBalance, login)
 
 	//Тут может быть проблема конфертации
-	err = query.Scan(&result.Current, &result.Withdrawn)
+	err := query.Scan(&result.Current, &result.Withdrawn)
 
 	if err != nil {
 		log.Println("empty")
@@ -374,17 +381,14 @@ func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.
 	result := handlers.ResponseOrderInfo{}
 
 	sqlGetOrder := `SELECT order_temp, status, accural FROM orders WHERE order_temp=($1);`
-	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, order)
-	if err != nil {
-		log.Println("err db.conn.QueryContext")
-		return result, err
-	}
+	rows := db.conn.QueryRowContext(ctx, sqlGetOrder, order)
+
 	if rows.Err() != nil {
 		log.Println("err rows.Err() != nil")
 		return result, rows.Err()
 	}
 	var u OrderInfoString //handlers.ResponseOrderInfo
-	err = rows.Scan(&u.Order, &u.Status, &u.Accrual)
+	err := rows.Scan(&u.Order, &u.Status, &u.Accrual)
 	if err != nil {
 		log.Println("err  rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)")
 		return result, err
