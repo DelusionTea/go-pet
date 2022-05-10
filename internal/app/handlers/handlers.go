@@ -129,8 +129,19 @@ func (h *Handler) CalculateThings(order string, c *gin.Context) {
 		}
 
 		err = json.Unmarshal(body, &value)
+
+		if value.Status == "PROCESSING" {
+			h.repo.UpdateStatus(order, "PROCESSING", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			time.Sleep(1 * time.Second)
+		}
 	}
 
+	if value.Status == "INVALID" {
+		h.repo.UpdateStatus(order, "INVALID", c)
+		log.Println("UpdateStatus(order, \"INVALID\"")
+		return
+	}
 	//call this thing
 
 	h.repo.UpdateStatus(order, "PROCESSING", c)
@@ -342,7 +353,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
 	log.Println("Accepted")
-	h.CalculateThings(value.Order, c)
+	go h.CalculateThings(value.Order, c)
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
