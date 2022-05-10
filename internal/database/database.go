@@ -102,7 +102,7 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 	result2 := GetWalletData{}
 	wallet.Scan(&result2.current)
 
-	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ANY ($2);`
+	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
 	s := fmt.Sprintf("%f", result2.current+value)
 	_, err = db.conn.QueryContext(ctx, sqlSetStatus, s, order)
 	if err != nil {
@@ -113,7 +113,7 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 }
 
 func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Context) error {
-	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ANY ($2);`
+	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
 	if err != nil {
 		log.Println("err db.conn.QueryContext")
@@ -320,7 +320,7 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 	current := result.current - float64(value)
 	withdrawed := fmt.Sprintf("%f", float64(result.withdrawed)+value)
 
-	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ANY ($3);`
+	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ($3);`
 	s := fmt.Sprintf("%f", current)
 	_, err = db.conn.QueryContext(ctx, sqlUpdateWallet, s, withdrawed, login)
 
