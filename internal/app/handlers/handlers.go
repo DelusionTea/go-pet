@@ -165,9 +165,9 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 		}
 		//call this thing
 
-		h.repo.UpdateStatus(order, "PROCESSING", c)
-		log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
-		log.Println("start Magic")
+		//h.repo.UpdateStatus(order, "PROCESSING", c)
+		//log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
+		//log.Println("start Magic")
 
 		//Начислить баллы
 		log.Println("Start Update Wallet")
@@ -179,7 +179,7 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 			return
 		}
 		//Изменить статус
-		s := fmt.Sprintf("%f", float64(value.Accrual))
+		s := fmt.Sprintf("%f", value.Accrual)
 		err = h.repo.UpdateAccural(order, s, c)
 		log.Println("UpdateAccural")
 		if err != nil {
