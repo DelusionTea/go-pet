@@ -29,7 +29,7 @@ type MarketInterface interface {
 	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
 	UpdateWallet(order []byte, value float64, ctx context.Context) error
 	GetOrderInfo(order []byte, ctx context.Context) (ResponseOrderInfo, error)
-	UpdateAccural(order []byte, accural string, ctx context.Context)
+	UpdateAccural(order []byte, accural string, ctx context.Context) error
 }
 type user struct {
 	Login    string `json:"login"`
@@ -129,11 +129,18 @@ func (h *Handler) CalculateThings(order []byte, c *gin.Context) {
 		h.repo.UpdateStatus(order, "INVALID", c)
 		log.Println("UpdateStatus(order, \"INVALID\"")
 		log.Println(err)
+		return
 	}
 	//Изменить статус
 	s := fmt.Sprintf("%f", bill)
-	h.repo.UpdateAccural(order, s, c)
+	err = h.repo.UpdateAccural(order, s, c)
 	log.Println("UpdateAccural")
+	if err != nil {
+		h.repo.UpdateStatus(order, "INVALID", c)
+		log.Println("UpdateStatus(order, \"INVALID\"")
+		log.Println(err)
+		return
+	}
 	err = h.repo.UpdateStatus(order, "PROCESSED", c)
 	log.Println("UpdateStatus(order, \"PROCESSED\"")
 
