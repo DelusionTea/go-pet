@@ -106,9 +106,9 @@ func New(repo MarketInterface, serverAddress string, accrualURL string, wp *work
 }
 
 type ResponseAccural struct {
-	Order   string `json:"order"`
-	Status  string `json:"status"`
-	Accrual int    `json:"accrual"`
+	Order   string  `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float32 `json:"accrual"`
 }
 
 //func (h *Handler) AccrualAskWorker(co *gin.Context) {
@@ -138,7 +138,7 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 			log.Println("(value.Status != \"INVALID\") || (value.Status != \"PROCESSED\")")
 			response, err := http.Get(url) //
 			defer response.Body.Close()
-			body, err := io.ReadAll(response.Body)
+			body, err := ioutil.ReadAll(response.Body)
 			if err != nil {
 				//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 				log.Println("Server Error  89")
