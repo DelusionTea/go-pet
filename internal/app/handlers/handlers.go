@@ -17,23 +17,6 @@ import (
 )
 
 //const userkey = "user"
-
-type DBError struct {
-	Err   error
-	Title string
-}
-
-func (err *DBError) Error() string {
-	return fmt.Sprintf("%v", err.Err)
-}
-
-func NewErrorWithDB(err error, title string) error {
-	return &DBError{
-		Err:   err,
-		Title: title,
-	}
-}
-
 type MarketInterface interface {
 	UpdateStatus(order []byte, status string, ctx context.Context) error
 	Register(login string, pass string, ctx context.Context) error
@@ -74,11 +57,6 @@ type ResponseOrderInfo struct {
 	Accrual int    `json:"accrual"`
 }
 
-//type ResponseWithdraw struct {
-//	Current   float64 `json:"current"`
-//	Withdrawn int     `json:"withdrawn"`
-//}
-
 type ResponseWithdraws struct {
 	Order       string    `json:"order"`
 	Sum         int       `json:"sum"`
@@ -94,6 +72,26 @@ type Handler struct {
 	serverAddress string
 	wp            workers.Workers
 }
+type DBError struct {
+	Err   error
+	Title string
+}
+
+type RequestWithdraw struct {
+	Order string  `json:"order"`
+	Sum   float64 `json:"sum"`
+}
+
+func (err *DBError) Error() string {
+	return fmt.Sprintf("%v", err.Err)
+}
+
+func NewErrorWithDB(err error, title string) error {
+	return &DBError{
+		Err:   err,
+		Title: title,
+	}
+}
 
 func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handler {
 	return &Handler{
@@ -102,30 +100,38 @@ func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handl
 		wp:            *wp,
 	}
 }
+
 func (h *Handler) CalculateThings(order []byte, c *gin.Context) {
+	log.Println("start celculate things order: ", order)
 	//Принять заказ и изменить статус на "в обработке"
 	h.repo.UpdateStatus(order, "PROCESSING", c)
+	log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
 	//NEW — заказ загружен в систему, но не попал в обработку;
 	//PROCESSING — вознаграждение за заказ рассчитывается;
 	//INVALID — система расчёта вознаграждений отказала в расчёте;
 	//PROCESSED — данные по заказу проверены и информация о расчёте успешно получена.
 
 	//Сделать магию
+	log.Println("start Magic")
 	bill, err := magic.Magic(order)
 	if err != nil {
 		h.repo.UpdateStatus(order, "INVALID", c)
 		log.Println(err)
 		return
 	}
+	log.Println("end Magic, bill is:", bill)
 
 	//Начислить баллы
+	log.Println("Start Update Wallet")
 	err = h.repo.UpdateWallet(order, bill, c)
 	if err != nil {
 		h.repo.UpdateStatus(order, "INVALID", c)
+		log.Println("UpdateStatus(order, \"INVALID\"")
 		log.Println(err)
 	}
 	//Изменить статус
 	err = h.repo.UpdateStatus(order, "PROCESSED", c)
+	log.Println("UpdateStatus(order, \"PROCESSED\"")
 
 }
 func (h *Handler) HandlerRegister(c *gin.Context) {
@@ -157,12 +163,6 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		return
 	}
 
-	//log.Println(value.Login, value.Password)
-	//if err != nil {
-	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-	//	log.Println("Server Error")
-	//	return
-	//}
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
 		log.Println("Bad Request Error 116")
@@ -183,14 +183,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, "Success Register")
 	log.Println("OK call Login")
-	//TEMP
-	//baseURL := "http://" + h.serverAddress
-	//baseURL = baseURL + "/"
-	//baseURL := "localhost"
-	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-	//
-	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
-	//log.Println(CheckCookie, "- Проверка в функции Регистрации")
+
 	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
@@ -223,7 +216,6 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	}
 
 	json.Unmarshal([]byte(body), &value)
-	//response, err := h.repo.AddURLs(c.Request.Context(), data, c.GetString("userId"))
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -231,11 +223,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		log.Println(err)
 		return
 	}
-	//if err := json.Unmarshal([]byte(body), &value); err != nil {
-	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-	//	log.Println("Server Error")
-	//	return
-	//}
+
 	log.Println(value.Login, value.Password)
 
 	if (value.Login == "") || (value.Password == "") {
@@ -247,10 +235,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	//
 	if err != nil {
 		var ue *DBError
-		//if errors.As(err, &ue) && ue.Title == "user not found" {
-		//	c.IndentedJSON(http.StatusConflict, "Status Conflict")
-		//	return
-		//}
+
 		if errors.As(err, &ue) && (ue.Title == "wrong password" || ue.Title == "user not found") {
 			c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
 			log.Println("bad login pass")
@@ -262,11 +247,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		return
 	}
 	log.Println(results)
-	//baseURL := "http://" + h.serverAddress
-	//baseURL = baseURL + "/"
-	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
-	//log.Println(CheckCookie, "- Проверка в функции Логина")
+
 	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
@@ -391,39 +372,15 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 		log.Println(err)
 		return
 	}
-	//if result.==nil{
-	//	c.IndentedJSON(http.StatusNoContent, result)
-	//	return
-	//}
+
 	log.Println(result)
 
 	c.JSON(http.StatusOK, result)
-	//Хендлер доступен только авторизованному пользователю. В ответе должны содержаться данные о текущей сумме баллов лояльности, а также сумме использованных за весь период регистрации баллов.
-	//	Формат запроса:
-	//GET /api/user/balance HTTP/1.1
-	//Content-Length: 0
-	//Возможные коды ответа:
-	//200 — успешная обработка запроса.
-	//	Формат ответа:
-	//200 OK HTTP/1.1
-	//Content-Type: application/json
-	//...
-	//
-	//{
-	//	"current": 500.5,
-	//	"withdrawn": 42
-	//}
-	//
-	//401 — пользователь не авторизован.
-	//500 — внутренняя ошибка сервера.
-}
 
-type RequestWithdraw struct {
-	Order string  `json:"order"`
-	Sum   float64 `json:"sum"`
 }
 
 func (h *Handler) HandlerWithdraw(c *gin.Context) {
+	log.Println("Start HandlerWithdraw")
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -463,7 +420,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
 		return
 	}
-	//i, err := strconv.Atoi(value.Sum)
+	log.Println("call db Withdraw")
 	err = h.repo.Withdraw(fmt.Sprintf("%v", user), []byte(value.Order), value.Sum, c)
 
 	if err != nil {
@@ -474,15 +431,17 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 			return
 		} else {
 			c.IndentedJSON(http.StatusInternalServerError, err)
-			log.Println("Server Error 452")
+			log.Println("Server Error 452", err)
 			return
 		}
 
 	}
+	log.Println("End of HandlerWithdraw")
 	c.IndentedJSON(http.StatusOK, "Ok")
 
 }
 func (h *Handler) HandlerWithdraws(c *gin.Context) {
+	log.Println("End of Handler Withdraws")
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -506,6 +465,7 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 	}
 	if len(result) == 0 {
 		c.IndentedJSON(http.StatusNoContent, result)
+		log.Println("len(res) is nil")
 		return
 	}
 	log.Println(result)

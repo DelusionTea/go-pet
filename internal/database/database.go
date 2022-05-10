@@ -86,7 +86,7 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 	sqlGetUser := `SELECT owner FROM orders WHERE order_temp=$1;`
 	user, err := db.conn.QueryContext(ctx, sqlGetUser, order)
 	if err != nil {
-		log.Println("err db.conn.QueryContext(ctx, sqlGetUser, order)")
+		log.Println("err UpdateWallet", err)
 		return err
 	}
 	result := GetUserData{}
@@ -101,12 +101,13 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 
 	result2 := GetWalletData{}
 	wallet.Scan(&result2.current)
-
+	log.Println("&result2.current: ", &result2.current)
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
 	s := fmt.Sprintf("%f", result2.current+value)
+	log.Println("s: ", s)
 	_, err = db.conn.QueryContext(ctx, sqlSetStatus, s, order)
 	if err != nil {
-		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)")
+		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)", err)
 		return err
 	}
 	return nil
@@ -116,7 +117,7 @@ func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Cont
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
 	if err != nil {
-		log.Println("err db.conn.QueryContext")
+		log.Println("err UpdateStatus", err)
 		return err
 	}
 	return nil
@@ -134,9 +135,9 @@ func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (str
 		return "", handlers.NewErrorWithDB(errors.New("wrong password"), "wrong password")
 	}
 	//UPDATE users SET is_authed = true WHERE login = ANY ($1);
-	sqlSetAuth := `UPDATE users SET is_authed = true WHERE login = ANY ($1);`
-	queryauth := db.conn.QueryRowContext(ctx, sqlSetAuth, login)
-	queryauth.Scan(&result.authed)
+	//sqlSetAuth := `UPDATE users SET is_authed = true WHERE login = ANY ($1);`
+	//queryauth := db.conn.QueryRowContext(ctx, sqlSetAuth, login)
+	//queryauth.Scan(&result.authed)
 	return "Login success", nil
 }
 
@@ -168,10 +169,6 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 			log.Println("UniqueViolation")
 			return handlers.NewErrorWithDB(err, "Conflict")
 		}
-		//if err.Code == pgerrcode.UniqueViolation {
-		//	return err //"StatusConflict"
-		//	//ctx.IndentedJSON(http.StatusConflict)
-		//}
 		log.Println(err)
 	}
 	sqlAddWallet := `INSERT INTO wallet (owner, current_value, withdrawed)
@@ -186,7 +183,6 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 	return err
 }
 func (db *PGDataBase) UploadOrder(login string, order []byte, ctx context.Context) error {
-	//Вначале селект. Если не пусто, то делаем проверку - если там другой пользак то alredy here, если другой то Conflict
 	sqlCheckOrder := `SELECT owner FROM orders WHERE order_temp=$1 FETCH FIRST ROW ONLY;`
 
 	result := GetUserData{}
@@ -283,9 +279,6 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 	}
 	err = query.Scan(&result.Current, &result.Withdrawn)
 
-	//if result.Current == "" {
-	//	return "", handlers.NewErrorWithDB(errors.New("not found"), "user not found")
-	//}
 	if err != nil {
 		log.Println("empty")
 		return result, handlers.NewErrorWithDB(errors.New("empty"), "empty")
@@ -317,9 +310,9 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 		return err
 	}
 	//increase wallet
-	current := result.current - float64(value)
+	current := result.current - value
 	withdrawed := fmt.Sprintf("%f", float64(result.withdrawed)+value)
-
+	log.Println("withdrawed: ", withdrawed)
 	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ($3);`
 	s := fmt.Sprintf("%f", current)
 	_, err = db.conn.QueryContext(ctx, sqlUpdateWallet, s, withdrawed, login)
