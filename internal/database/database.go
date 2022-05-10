@@ -132,13 +132,13 @@ func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Cont
 }
 func (db *PGDataBase) UpdateAccural(order []byte, accural string, ctx context.Context) error {
 	log.Println("Start UpdateStatus order:", order)
-	sqlSetStatus := `UPDATE orders SET accural = ($1) WHERE order_temp = ($2);`
-	_, err := db.conn.QueryContext(ctx, sqlSetStatus, accural, order)
+	sqlSetAccural := `UPDATE orders SET accural = ($1) WHERE order_temp = ($2);`
+	_, err := db.conn.QueryContext(ctx, sqlSetAccural, accural, order)
 	if err != nil {
-		log.Println("err UpdateStatus", err)
+		log.Println("err UpdateAccural", err)
 		return err
 	}
-	log.Println("Good End UpdateStatus")
+	log.Println("Good End UpdateAccural")
 	return nil
 }
 func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (string, error) {
@@ -296,6 +296,8 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 		log.Println("err db.conn.QueryContext")
 		return result, err
 	}
+
+	//Тут может быть проблема конфертации
 	err = query.Scan(&result.Current, &result.Withdrawn)
 
 	if err != nil {
@@ -347,6 +349,13 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 	//422 — неверный номер заказа;
 	return nil
 }
+
+type OrderInfoString struct {
+	Order   string
+	Status  string
+	Accrual string
+}
+
 func (db *PGDataBase) GetOrderInfo(order []byte, ctx context.Context) (handlers.ResponseOrderInfo, error) {
 	result := handlers.ResponseOrderInfo{}
 
@@ -360,22 +369,28 @@ func (db *PGDataBase) GetOrderInfo(order []byte, ctx context.Context) (handlers.
 		log.Println("err rows.Err() != nil")
 		return result, rows.Err()
 	}
-	var u handlers.ResponseOrderInfo
+	var u OrderInfoString //handlers.ResponseOrderInfo
 	err = rows.Scan(&u.Order, &u.Status, &u.Accrual)
 	if err != nil {
 		log.Println("err  rows.Scan(&u.Order, &u.Status, &u.Accrual, &u.UploadedAt)")
 		return result, err
 	}
 	//result = append(result, u)
-
+	intAccrual, err := strconv.Atoi(u.Accrual)
 	result = handlers.ResponseOrderInfo{
 		Order:   u.Order,
 		Status:  u.Status,
-		Accrual: u.Accrual,
+		Accrual: intAccrual,
 	}
 
 	return result, nil
 }
+
+//type ResponseWithdrawsLocal struct{
+//	Order string
+//	Sum:         u.Sum,
+//	ProcessedAt: u.ProcessedAt,
+//}
 func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handlers.ResponseWithdraws, error) {
 	result := []handlers.ResponseWithdraws{}
 
@@ -398,7 +413,7 @@ func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handler
 			log.Println("err  rows.Scan(&u.Order, &u.Sum,&u.ProcessedAt)")
 			return result, handlers.NewErrorWithDB(errors.New("ResponseWithdraws"), "ResponseWithdraws")
 		}
-
+		//intSum, err := strconv.Atoi(u.Sum)
 		result = append(result, handlers.ResponseWithdraws{
 			Order:       u.Order,
 			Sum:         u.Sum,
