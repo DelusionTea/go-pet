@@ -112,7 +112,6 @@ type ResponseAccural struct {
 }
 
 //func (h *Handler) AccrualAskWorker(co *gin.Context) {
-//
 //	c := time.Tick(time.Second)
 //	for range c {
 //		go h.AccrualAskWorkerRunner(co)
@@ -136,6 +135,7 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 		log.Println("URL:")
 		log.Println(url)
 		if (value.Status != "INVALID") || (value.Status != "PROCESSED") {
+			log.Println("(value.Status != \"INVALID\") || (value.Status != \"PROCESSED\")")
 			response, err := http.Get(url) //
 			defer response.Body.Close()
 			body, err := io.ReadAll(response.Body)
@@ -158,6 +158,7 @@ func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
 		}
 
 		if value.Status == "INVALID" {
+			log.Println("value.Status == \"INVALID\"")
 			h.repo.UpdateStatus(order, "INVALID", c)
 			log.Println("UpdateStatus(order, \"INVALID\"")
 			return
@@ -434,10 +435,11 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 			log.Println(err)
 			return
 		}
-		go h.AccrualAskWorkerRunner(c)
 
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
+	go h.AccrualAskWorkerRunner(c)
+	//h.AccrualAskWorkerRunner(c)
 	log.Println("Accepted")
 	//go h.AccrualAskWorker(c)
 }
