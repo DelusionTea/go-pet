@@ -30,6 +30,7 @@ type MarketInterface interface {
 	UpdateWallet(order string, value float64, ctx context.Context) error
 	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
 	UpdateAccural(order string, accural string, ctx context.Context) error
+	GetNewOrder(ctx context.Context) (string, error)
 }
 type user struct {
 	Login    string `json:"login"`
@@ -110,6 +111,86 @@ type ResponseAccural struct {
 	Accrual int    `json:"accrual"`
 }
 
+func (h *Handler) AccrualAskWorker() {
+
+	c := time.Tick(time.Second)
+	for range c {
+		go h.AccrualAskWorkerRunner()
+	}
+}
+func (h *Handler) AccrualAskWorkerRunner() {
+	c := context.Background()
+	order, err := h.repo.GetNewOrder(c)
+	if err != nil {
+		//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error  125")
+		log.Println(err)
+		return
+	}
+	if order != "" {
+		log.Println("start celculate things order: ", order)
+		//Принять заказ и изменить статус на "в обработке"
+		value := ResponseAccural{}
+		url := "http://" + h.accuralURL + "/api/orders/" + order
+		log.Println("URL:")
+		log.Println(url)
+		if (value.Status != "INVALID") || (value.Status != "PROCESSED") {
+			response, err := http.Get(url) //
+			defer response.Body.Close()
+			body, err := io.ReadAll(response.Body)
+			if err != nil {
+				//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+				log.Println("Server Error  89")
+				log.Println(err)
+				return
+			}
+
+			err = json.Unmarshal(body, &value)
+			log.Println("body: ", body)
+			log.Println("status is:", &value.Status)
+			log.Println("accrual is:", &value.Accrual)
+			log.Println("order is:", &value.Order)
+			if value.Status == "PROCESSING" {
+				h.repo.UpdateStatus(order, "PROCESSING", c)
+				log.Println("UpdateStatus(order, \"PROCESSING\"")
+			}
+		}
+
+		if value.Status == "INVALID" {
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			return
+		}
+		//call this thing
+
+		h.repo.UpdateStatus(order, "PROCESSING", c)
+		log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
+		log.Println("start Magic")
+
+		//Начислить баллы
+		log.Println("Start Update Wallet")
+		err := h.repo.UpdateWallet(order, float64(value.Accrual), c)
+		if err != nil {
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			log.Println(err)
+			return
+		}
+		//Изменить статус
+		s := fmt.Sprintf("%f", float64(value.Accrual))
+		err = h.repo.UpdateAccural(order, s, c)
+		log.Println("UpdateAccural")
+		if err != nil {
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			log.Println(err)
+			return
+		}
+		err = h.repo.UpdateStatus(order, "PROCESSED", c)
+		log.Println("UpdateStatus(order, \"PROCESSED\"")
+
+	}
+}
 func (h *Handler) CalculateThings(order string, c *gin.Context) {
 	log.Println("start celculate things order: ", order)
 	//Принять заказ и изменить статус на "в обработке"
@@ -356,7 +437,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
 	log.Println("Accepted")
-	go h.CalculateThings(value.Order, c)
+	//go h.AccrualAskWorker(c)
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {

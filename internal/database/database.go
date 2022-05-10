@@ -444,7 +444,19 @@ func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handler
 	}
 	return result, nil
 }
+func (db *PGDataBase) GetNewOrder(ctx context.Context) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	var order string
 
+	sqlGetNewOrder := `SELECT order_temp FROM orders WHERE status in('PROCESSING', 'NEW') ORDER BY random() LIMIT 1;`
+	row, err := db.conn.QueryContext(ctx, sqlGetNewOrder)
+	err = row.Scan(order)
+	if err != nil {
+		return "err", err
+	}
+	return order, nil
+}
 func NewDatabase(db *sql.DB) *PGDataBase {
 	result := &PGDataBase{
 		conn: db,

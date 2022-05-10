@@ -35,6 +35,7 @@ func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.W
 			),
 		),
 	)
+
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
 	router := gin.Default()
 	//router.Use(sessions.Sessions("mysession", sessions.NewCookieStore(secret)))
@@ -46,6 +47,7 @@ func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.W
 	//router.Use(middleware.CookieMiddleware(conf))
 	//router.Use(gzip.Gzip(gzip.DefaultCompression))
 	handler := handlers.New(repo, conf.ServerAddress, conf.ServerAddress, wp)
+	go handler.AccrualAskWorker()
 	router.POST("/api/user/register", handler.HandlerRegister)
 	router.POST("/api/user/login", handler.HandlerLogin)
 	router.POST("/api/user/orders", handler.HandlerPostOrders)
@@ -78,7 +80,6 @@ func main() {
 		wp.Run(ctx)
 	}()
 	//if cfg.DataBase != "" {
-
 	db, err := sql.Open("postgres", cfg.DataBase)
 	if err != nil {
 		log.Fatal(err)
