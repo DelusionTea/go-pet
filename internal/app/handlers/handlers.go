@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/DelusionTea/go-pet.git/internal/app/magic"
 	"github.com/DelusionTea/go-pet.git/internal/luhn"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/go-session/session/v3"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -71,6 +71,7 @@ type BalanceResponse struct {
 type Handler struct {
 	repo          MarketInterface
 	serverAddress string
+	accuralURL    string
 	wp            workers.Workers
 }
 type DBError struct {
@@ -94,37 +95,51 @@ func NewErrorWithDB(err error, title string) error {
 	}
 }
 
-func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handler {
+func New(repo MarketInterface, serverAddress string, accrualURL string, wp *workers.Workers) *Handler {
 	return &Handler{
 		repo:          repo,
 		serverAddress: serverAddress,
+		accuralURL:    accrualURL,
 		wp:            *wp,
 	}
+}
+
+type ResponseAccural struct {
+	Order   string `json:"order"`
+	Status  string `json:"status"`
+	Accrual int    `json:"accrual"`
 }
 
 func (h *Handler) CalculateThings(order string, c *gin.Context) {
 	log.Println("start celculate things order: ", order)
 	//Принять заказ и изменить статус на "в обработке"
+	value := ResponseAccural{}
+	url := h.accuralURL + "/api/orders/" + order
+	log.Println("URL:")
+	log.Println(url)
+	for (value.Status != "INVALID") || (value.Status != "PROCESSED") {
+		response, err := http.Get(url) //
+		defer response.Body.Close()
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+			log.Println("Server Error  89")
+			log.Println(err)
+			return
+		}
+
+		err = json.Unmarshal(body, &value)
+	}
+
+	//call this thing
+
 	h.repo.UpdateStatus(order, "PROCESSING", c)
 	log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
-	//NEW — заказ загружен в систему, но не попал в обработку;
-	//PROCESSING — вознаграждение за заказ рассчитывается;
-	//INVALID — система расчёта вознаграждений отказала в расчёте;
-	//PROCESSED — данные по заказу проверены и информация о расчёте успешно получена.
-
-	//Сделать магию
 	log.Println("start Magic")
-	bill, err := magic.Magic(order)
-	if err != nil {
-		h.repo.UpdateStatus(order, "INVALID", c)
-		log.Println(err)
-		return
-	}
-	log.Println("end Magic, bill is:", bill)
 
 	//Начислить баллы
 	log.Println("Start Update Wallet")
-	err = h.repo.UpdateWallet(order, bill, c)
+	err := h.repo.UpdateWallet(order, float64(value.Accrual), c)
 	if err != nil {
 		h.repo.UpdateStatus(order, "INVALID", c)
 		log.Println("UpdateStatus(order, \"INVALID\"")
@@ -132,7 +147,7 @@ func (h *Handler) CalculateThings(order string, c *gin.Context) {
 		return
 	}
 	//Изменить статус
-	s := fmt.Sprintf("%f", bill)
+	s := fmt.Sprintf("%f", float64(value.Accrual))
 	err = h.repo.UpdateAccural(order, s, c)
 	log.Println("UpdateAccural")
 	if err != nil {

@@ -18,12 +18,11 @@ type Config struct {
 	//адрес и порт запуска сервиса: переменная окружения ОС RUN_ADDRESS или флаг -a;
 	//адрес подключения к базе данных: переменная окружения ОС DATABASE_URI или флаг -d;
 	//адрес системы расчёта начислений: переменная окружения ОС ACCRUAL_SYSTEM_ADDRESS или флаг -r.
-	ServerAddress string `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
-	DataBase      string `env:"DATABASE_URI" envDefault:"http://localhost:8080/"`
-	RedisAddress  string `env:"REDIS_URI" envDefault:"localhost:6379"`
-	SystemURL     string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8080/"`
-	NumbWorkers   int    `env:"NUMBER_OF_WORKERS"`
-	WorkerBuff    int    `env:"WORKERS_BUFFER"`
+	ServerAddress    string `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
+	DataBase         string `env:"DATABASE_URI" envDefault:"http://localhost:8080/"`
+	SystemAccrualURL string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8081/"`
+	NumbWorkers      int    `env:"NUMBER_OF_WORKERS"`
+	WorkerBuff       int    `env:"WORKERS_BUFFER"`
 }
 
 func GetConfig() *Config {
@@ -33,7 +32,7 @@ func GetConfig() *Config {
 		log.Fatal(err)
 	}
 	ServerAddress := flag.String("a", instance.ServerAddress, "run address")
-	SystemURL := flag.String("r", instance.SystemURL, "accural system address")
+	SystemAccrualURL := flag.String("r", instance.SystemAccrualURL, "accural system address")
 	DataBase := flag.String("d", instance.DataBase, "DataBase")
 	flag.Parse()
 
@@ -41,8 +40,8 @@ func GetConfig() *Config {
 		instance.ServerAddress = *ServerAddress
 	}
 
-	if os.Getenv("SystemURL") == "" {
-		instance.SystemURL = *SystemURL
+	if os.Getenv("SystemAccrualURL") == "" {
+		instance.SystemAccrualURL = *SystemAccrualURL
 	}
 	if os.Getenv("DATABASE_URI") == "" {
 		instance.DataBase = *DataBase

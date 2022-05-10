@@ -45,7 +45,7 @@ func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.W
 	router.Use(middleware.GzipDecodeMiddleware())
 	//router.Use(middleware.CookieMiddleware(conf))
 	//router.Use(gzip.Gzip(gzip.DefaultCompression))
-	handler := handlers.New(repo, conf.ServerAddress, wp)
+	handler := handlers.New(repo, conf.ServerAddress, conf.ServerAddress, wp)
 	router.POST("/api/user/register", handler.HandlerRegister)
 	router.POST("/api/user/login", handler.HandlerLogin)
 	router.POST("/api/user/orders", handler.HandlerPostOrders)
