@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/DelusionTea/go-pet.git/internal/luhn"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/go-session/session/v3"
@@ -15,10 +16,72 @@ import (
 )
 
 //const userkey = "user"
+type MarketInterface interface {
+	UpdateStatus(order string, status string, ctx context.Context) error
+	Register(login string, pass string, ctx context.Context) error
+	Login(login string, pass string, ctx context.Context) (string, error)
+	CheckAuth(login string, ctx context.Context) (string, error)
+	UploadOrder(login string, order string, ctx context.Context) error
+	GetOrder(login string, ctx context.Context) ([]ResponseOrder, error)
+	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
+	Withdraw(login string, order string, value float64, ctx context.Context) error
+	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
+	UpdateWallet(order string, value float32, ctx context.Context) error
+	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
+	UpdateAccural(order string, accural string, ctx context.Context) error
+	GetNewOrder(ctx context.Context) (string, error)
+}
+type user struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	//IsLogined bool
+}
 
+type order struct {
+	Owner      string    `json:"login"`
+	Order      string    `json:"order"`
+	Status     string    `json:"status"`
+	Accrual    int       `json:"accrual"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+type ResponseOrder struct {
+	Order      string    `json:"number"`
+	Status     string    `json:"status"`
+	Accrual    int       `json:"accrual"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+type ResponseOrderInfo struct {
+	Order   string `json:"number"`
+	Status  string `json:"status"`
+	Accrual int    `json:"accrual"`
+}
+
+type ResponseWithdraws struct {
+	Order       string    `json:"order"`
+	Sum         int       `json:"sum"`
+	ProcessedAt time.Time `json:"processed_at"`
+}
+type BalanceResponse struct {
+	Current   float64 `json:"current"`
+	Withdrawn int     `json:"withdrawn"`
+}
+
+type Handler struct {
+	repo          MarketInterface
+	serverAddress string
+	accuralURL    string
+	wp            workers.Workers
+}
 type DBError struct {
 	Err   error
 	Title string
+}
+
+type RequestWithdraw struct {
+	Order string  `json:"order"`
+	Sum   float64 `json:"sum"`
 }
 
 func (err *DBError) Error() string {
@@ -32,42 +95,173 @@ func NewErrorWithDB(err error, title string) error {
 	}
 }
 
-type MarketInterface interface {
-	UpdateStatus(status string, ctx context.Context)
-	Register(login string, pass string, ctx context.Context) error
-	Login(login string, pass string, ctx context.Context) (string, error)
-	CheckAuth(login string, ctx context.Context) (string, error)
-	UploadOrder(login string, order []byte, ctx context.Context) error
-	GetOrder(status string, ctx context.Context)
-	GetBalance(status string, ctx context.Context)
-	Withdraw(status string, ctx context.Context)
-	GetWithdraws(status string, ctx context.Context)
-}
-type user struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
-	//IsLogined bool
-}
-
-type order struct {
-	Owner      string    `json:"login"`
-	Order      []byte    `json:"order"`
-	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual"`
-	UploadedAt time.Time `json:"uploaded_at"`
-}
-
-type Handler struct {
-	repo          MarketInterface
-	serverAddress string
-	wp            workers.Workers
-}
-
-func New(repo MarketInterface, serverAddress string, wp *workers.Workers) *Handler {
+func New(repo MarketInterface, serverAddress string, accrualURL string, wp *workers.Workers) *Handler {
 	return &Handler{
 		repo:          repo,
 		serverAddress: serverAddress,
+		accuralURL:    accrualURL,
 		wp:            *wp,
+	}
+}
+
+type ResponseAccural struct {
+	Order   string  `json:"order"`
+	Status  string  `json:"status"`
+	Accrual float32 `json:"accrual"`
+}
+
+func (h *Handler) AccrualAskWorker(co *gin.Context) {
+	c := time.Tick(time.Second)
+	for range c {
+		go h.AccrualAskWorkerRunner(co)
+	}
+}
+func (h *Handler) AccrualAskWorkerRunner(c *gin.Context) {
+	log.Println("START FUCKIG ROUTINE")
+	order, err := h.repo.GetNewOrder(c)
+	if err != nil {
+		//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error  125")
+		log.Println(err)
+		return
+	}
+	log.Println("ORDER OF FUCKIG ROUTINE is ", order)
+
+	if order != "" {
+
+		log.Println("start celculate things order: ", order)
+
+		//Принять заказ и изменить статус на "в обработке"
+		value := ResponseAccural{}
+		url := "http://" + h.accuralURL + "/api/orders/" + order
+		log.Println("URL:")
+		log.Println(url)
+		if (value.Status != "INVALID") || (value.Status != "PROCESSED") {
+			log.Println("(value.Status != \"INVALID\") || (value.Status != \"PROCESSED\")")
+			response, err := http.Get(url) //
+			defer response.Body.Close()
+			body, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+				log.Println("Server Error  89")
+				log.Println(err)
+				return
+			}
+
+			err = json.Unmarshal(body, &value)
+			log.Println("body: ", body)
+			log.Println("status is:", &value.Status)
+			log.Println("accrual is:", &value.Accrual)
+			log.Println("order is:", &value.Order)
+			if value.Status == "PROCESSING" {
+				h.repo.UpdateStatus(order, "PROCESSING", c)
+				log.Println("UpdateStatus(order, \"PROCESSING\"")
+			}
+		}
+
+		if value.Status == "INVALID" {
+			log.Println("value.Status == \"INVALID\"")
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			return
+		}
+		//call this thing
+
+		//h.repo.UpdateStatus(order, "PROCESSING", c)
+		//log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
+		//log.Println("start Magic")
+
+		//Начислить баллы
+		log.Println("Start Update Wallet")
+		err := h.repo.UpdateWallet(order, value.Accrual, c)
+		if err != nil {
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			log.Println(err)
+			return
+		}
+		//Изменить Accural
+		s := fmt.Sprintf("%f", value.Accrual)
+		err = h.repo.UpdateAccural(order, s, c)
+		log.Println("UpdateAccural")
+		if err != nil {
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			log.Println(err)
+			return
+		}
+		err = h.repo.UpdateStatus(order, "PROCESSED", c)
+		log.Println("UpdateStatus(order, \"PROCESSED\"")
+
+	}
+}
+func (h *Handler) CalculateThings(order string, c *gin.Context) {
+	log.Println("START FUCKIG NOT ROUTINE")
+
+	log.Println("ORDER OF FUCKIG NOT ROUTINE is ", order)
+	if order != "" {
+		log.Println("start celculate things order: ", order)
+		//Принять заказ и изменить статус на "в обработке"
+		value := ResponseAccural{}
+		url := "http://" + h.accuralURL + "/api/orders/" + order
+		log.Println("URL:")
+		log.Println(url)
+		if (value.Status != "INVALID") || (value.Status != "PROCESSED") {
+			log.Println("(value.Status != \"INVALID\") || (value.Status != \"PROCESSED\")")
+			response, err := http.Get(url) //
+			defer response.Body.Close()
+			body, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+				log.Println("Server Error  89")
+				log.Println(err)
+				return
+			}
+
+			err = json.Unmarshal(body, &value)
+			log.Println("body: ", body)
+			log.Println("status is:", &value.Status)
+			log.Println("accrual is:", &value.Accrual)
+			log.Println("order is:", &value.Order)
+			if value.Status == "PROCESSING" {
+				h.repo.UpdateStatus(order, "PROCESSING", c)
+				log.Println("UpdateStatus(order, \"PROCESSING\"")
+			}
+		}
+
+		if value.Status == "INVALID" {
+			log.Println("value.Status == \"INVALID\"")
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			return
+		}
+		//call this thing
+
+		//h.repo.UpdateStatus(order, "PROCESSING", c)
+		//log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
+		//log.Println("start Magic")
+
+		//Начислить баллы
+		log.Println("Start Update Wallet")
+		err := h.repo.UpdateWallet(order, value.Accrual, c)
+		if err != nil {
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			log.Println(err)
+			return
+		}
+		//Изменить статус
+		s := fmt.Sprintf("%f", value.Accrual)
+		err = h.repo.UpdateAccural(order, s, c)
+		log.Println("UpdateAccural")
+		if err != nil {
+			h.repo.UpdateStatus(order, "INVALID", c)
+			log.Println("UpdateStatus(order, \"INVALID\"")
+			log.Println(err)
+			return
+		}
+		err = h.repo.UpdateStatus(order, "PROCESSED", c)
+		log.Println("UpdateStatus(order, \"PROCESSED\"")
 	}
 }
 
@@ -78,6 +272,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 80")
+		log.Println(err)
 		return
 	}
 	value := user{}
@@ -87,17 +282,11 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error  89")
+		log.Println(err)
 		return
 	}
-	//if err := json.Unmarshal([]byte(body), &value); err != nil {
-	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-	//	log.Println("Server Error")
-	//	return
-	//}
 
-	json.Unmarshal([]byte(body), &value)
-
-	//response, err := h.repo.AddURLs(c.Request.Context(), data, c.GetString("userId"))
+	err = json.Unmarshal(body, &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -105,15 +294,10 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		return
 	}
 
-	//log.Println(value.Login, value.Password)
-	//if err != nil {
-	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-	//	log.Println("Server Error")
-	//	return
-	//}
 	if (value.Login == "") || (value.Password == "") {
 		c.IndentedJSON(http.StatusBadRequest, "Error")
 		log.Println("Bad Request Error 116")
+		log.Println(err)
 		return
 	}
 	err = h.repo.Register(value.Login, value.Password, c)
@@ -130,14 +314,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	}
 	c.IndentedJSON(http.StatusOK, "Success Register")
 	log.Println("OK call Login")
-	//TEMP
-	//baseURL := "http://" + h.serverAddress
-	//baseURL = baseURL + "/"
-	//baseURL := "localhost"
-	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-	//
-	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
-	//log.Println(CheckCookie, "- Проверка в функции Регистрации")
+
 	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
@@ -154,6 +331,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 155")
+		log.Println(err)
 		return
 	}
 	//var results string
@@ -164,22 +342,19 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 165")
+		log.Println(err)
 		return
 	}
 
-	json.Unmarshal([]byte(body), &value)
-	//response, err := h.repo.AddURLs(c.Request.Context(), data, c.GetString("userId"))
+	json.Unmarshal(body, &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 174")
+		log.Println(err)
 		return
 	}
-	//if err := json.Unmarshal([]byte(body), &value); err != nil {
-	//	c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-	//	log.Println("Server Error")
-	//	return
-	//}
+
 	log.Println(value.Login, value.Password)
 
 	if (value.Login == "") || (value.Password == "") {
@@ -191,10 +366,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 	//
 	if err != nil {
 		var ue *DBError
-		//if errors.As(err, &ue) && ue.Title == "user not found" {
-		//	c.IndentedJSON(http.StatusConflict, "Status Conflict")
-		//	return
-		//}
+
 		if errors.As(err, &ue) && (ue.Title == "wrong password" || ue.Title == "user not found") {
 			c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
 			log.Println("bad login pass")
@@ -202,18 +374,16 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusInternalServerError, err)
 		log.Println("Server Error 203")
+		log.Println(err)
 		return
 	}
 	log.Println(results)
-	//baseURL := "http://" + h.serverAddress
-	//baseURL = baseURL + "/"
-	//c.SetCookie("user", value.Login, 864000, "/", baseURL, false, false)
-	//CheckCookie, err := c.Cookie("user") //c.Set("userId", id.String())
-	//log.Println(CheckCookie, "- Проверка в функции Логина")
+
 	store.Set("user", value.Login)
 	if err := store.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		log.Println("Server Error 215")
+		log.Println(err)
 		return
 	}
 	c.IndentedJSON(http.StatusOK, "Success Login")
@@ -226,6 +396,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
 	user, ok := store.Get("user")
@@ -240,26 +411,21 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
 		log.Println("Server Error 241")
+		log.Println(err)
 		return
 	}
-	//result, err := h.repo.GetUserURL(c.Request.Context(), c.GetString("userId"))
+
 	value := order{}
-	//value.Owner, err = c.Cookie("user")
-	//log.Println("value.Owner:  ", value.Owner)
-	//if err != nil {
-	//	log.Println("value.Owner:  ", value.Owner, "  we have error - empty")
-	//	c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
-	//	return
-	//}
 	value.Owner = fmt.Sprintf("%v", user)
-	value.Order = body
+	value.Order = string(body)
+
+	if !luhn.Valid(string(value.Order)) {
+		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
+		return
+	}
 
 	err = h.repo.UploadOrder(value.Owner, value.Order, c)
-	//200 — номер заказа уже был загружен этим пользователем;
-	//202 — новый номер заказа принят в обработку;
-	//!!!400 — неверный формат запроса;
-	//+++401 — пользователь не аутентифицирован;
-	//409 — номер заказа уже был загружен другим пользователем;
+
 	if err != nil {
 		var ue *DBError
 		if errors.As(err, &ue) && (ue.Title == "Already here") {
@@ -271,170 +437,186 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 			c.IndentedJSON(http.StatusConflict, "Conflict")
 			log.Println("Conflict")
 			return
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, err)
+			log.Println("Server Error 275")
+			log.Println(err)
+			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, err)
-		log.Println("Server Error 275")
-		return
+
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
+	h.CalculateThings(value.Order, c)
+	go h.AccrualAskWorker(c)
+	//h.AccrualAskWorkerRunner(c)
 	log.Println("Accepted")
-
-	//CHECK BODY VALUE!!!!
-
-	//user := user{}
-	//h.repo.CheckAuth(user.Login, c)
-	//Номер заказа может быть проверен на корректность ввода с помощью алгоритма Луна.
-	//	Формат запроса:
-	//POST /api/user/orders HTTP/1.1
-	//Content-Type: text/plain
-	//...
-	//
-	//12345678903
-	//Возможные коды ответа:
-	//200 — номер заказа уже был загружен этим пользователем;
-	//202 — новый номер заказа принят в обработку;
-	//!!!400 — неверный формат запроса;
-	//+++401 — пользователь не аутентифицирован;
-	//409 — номер заказа уже был загружен другим пользователем;
-	//!!!!!!!!!!!!!!422 — неверный формат номера заказа;!!!!!!!!!!!!!!!!!
-	//500 — внутренняя ошибка сервера.
+	//go h.AccrualAskWorker(c)
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
-	//value := order{}
-	//value.Owner = c.GetString("userId")
-	//if value.Owner == "" {
-	//	c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
-	//	return
-	//}
-	//
-	//defer c.Request.Body.Close()
-	//
-	//body, err := ioutil.ReadAll(c.Request.Body)
-	////CHECK BODY VALUE
-	//value.Order = body
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
 
-	//	Хендлер доступен только авторизованному пользователю. Номера заказа в выдаче должны быть отсортированы по времени загрузки от самых старых к самым новым. Формат даты — RFC3339.
-	//		Доступные статусы обработки расчётов:
-	//	NEW — заказ загружен в систему, но не попал в обработку;
-	//	PROCESSING — вознаграждение за заказ рассчитывается;
-	//	INVALID — система расчёта вознаграждений отказала в расчёте;
-	//	PROCESSED — данные по заказу проверены и информация о расчёте успешно получена.
-	//		Формат запроса:
-	//	GET /api/user/orders HTTP/1.1
-	//	Content-Length: 0
-	//	Возможные коды ответа:
-	//	200 — успешная обработка запроса.
-	//		Формат ответа:
-	//	200 OK HTTP/1.1
-	//	Content-Type: application/json
-	//	...
-	//
-	//[
-	//	{
-	//	"number": "9278923470",
-	//	"status": "PROCESSED",
-	//	"accrual": 500,
-	//	"uploaded_at": "2020-12-10T15:15:45+03:00"
-	//	},
-	//	{
-	//	"number": "12345678903",
-	//	"status": "PROCESSING",
-	//	"uploaded_at": "2020-12-10T15:12:01+03:00"
-	//	},
-	//	{
-	//	"number": "346436439",
-	//	"status": "INVALID",
-	//	"uploaded_at": "2020-12-09T16:09:53+03:00"
-	//	}
-	//	]
-	//
-	//	204 — нет данных для ответа.
-	//	401 — пользователь не авторизован.
-	//	500 — внутренняя ошибка сервера
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println(err)
+		//log.Println("Server Error 227")
+		return
+	}
+
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+
+	}
+
+	result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
+		return
+	}
+	if len(result) == 0 {
+		c.IndentedJSON(http.StatusNoContent, result)
+		return
+	}
+	log.Println(result)
+
+	c.JSON(http.StatusOK, result)
 }
 func (h *Handler) HandlerGetBalance(c *gin.Context) {
-	value := user{}
-	value.Login = c.GetString("userId")
-	if value.Login == "" {
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
-	//Хендлер доступен только авторизованному пользователю. В ответе должны содержаться данные о текущей сумме баллов лояльности, а также сумме использованных за весь период регистрации баллов.
-	//	Формат запроса:
-	//GET /api/user/balance HTTP/1.1
-	//Content-Length: 0
-	//Возможные коды ответа:
-	//200 — успешная обработка запроса.
-	//	Формат ответа:
-	//200 OK HTTP/1.1
-	//Content-Type: application/json
-	//...
-	//
-	//{
-	//	"current": 500.5,
-	//	"withdrawn": 42
-	//}
-	//
-	//401 — пользователь не авторизован.
-	//500 — внутренняя ошибка сервера.
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	result, err := h.repo.GetBalance(fmt.Sprintf("%v", user), c.Request.Context())
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
+		return
+	}
+
+	log.Println(result)
+
+	c.JSON(http.StatusOK, result)
+
 }
+
 func (h *Handler) HandlerWithdraw(c *gin.Context) {
-	value := user{}
-	value.Login = c.GetString("userId")
-	if value.Login == "" {
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	log.Println("Start HandlerWithdraw")
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
-	//Хендлер доступен только авторизованному пользователю. Номер заказа представляет собой гипотетический номер нового заказа пользователя, в счёт оплаты которого списываются баллы.
-	//	Примечание: для успешного списания достаточно успешной регистрации запроса, никаких внешних систем начисления не предусмотрено и не требуется реализовывать.
-	//	Формат запроса:
-	//POST /api/user/balance/withdraw HTTP/1.1
-	//Content-Type: application/json
-	//
-	//{
-	//	"order": "2377225624",
-	//	"sum": 751
-	//}
-	//Здесь order — номер заказа, а sum — сумма баллов к списанию в счёт оплаты.
-	//	Возможные коды ответа:
-	//200 — успешная обработка запроса;
-	//401 — пользователь не авторизован;
-	//402 — на счету недостаточно средств;
-	//422 — неверный номер заказа;
-	//500 — внутренняя ошибка сервера.
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	value := RequestWithdraw{}
+	defer c.Request.Body.Close()
+
+	body, err := ioutil.ReadAll(c.Request.Body)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error  89")
+		log.Println(err)
+		return
+	}
+	log.Println(body)
+
+	err = json.Unmarshal(body, &value)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 434", err)
+		log.Println(err)
+		return
+	}
+
+	if !luhn.Valid(string(value.Order)) {
+		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
+		return
+	}
+	log.Println("call db Withdraw")
+	err = h.repo.Withdraw(fmt.Sprintf("%v", user), string(value.Order), value.Sum, c)
+
+	if err != nil {
+		var ue *DBError
+		if errors.As(err, &ue) && (ue.Title == "402") {
+			c.IndentedJSON(http.StatusPaymentRequired, "PaymentRequired")
+			log.Println("PaymentRequired")
+			return
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, err)
+			log.Println("Server Error 452", err)
+			return
+		}
+
+	}
+	log.Println("End of HandlerWithdraw")
+	c.IndentedJSON(http.StatusOK, "Ok")
+
 }
 func (h *Handler) HandlerWithdraws(c *gin.Context) {
-	value := user{}
-	value.Login = c.GetString("userId")
-	if value.Login == "" {
-		c.IndentedJSON(http.StatusUnauthorized, "Status Unauthorized")
+	log.Println("End of Handler Withdraws")
+	store, err := session.Start(context.Background(), c.Writer, c.Request)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+		log.Println("Server Error 227")
+		log.Println(err)
 		return
 	}
-	//	Хендлер доступен только авторизованному пользователю. Факты выводов в выдаче должны быть отсортированы по времени вывода от самых старых к самым новым. Формат даты — RFC3339.
-	//		Формат запроса:
-	//	GET /api/user/withdrawals HTTP/1.1
-	//	Content-Length: 0
-	//	Возможные коды ответа:
-	//	200 — успешная обработка запроса.
-	//		Формат ответа:
-	//	200 OK HTTP/1.1
-	//	Content-Type: application/json
-	//	...
-	//
-	//[
-	//	{
-	//	"order": "2377225624",
-	//	"sum": 500,
-	//	"processed_at": "2020-12-09T16:09:57+03:00"
-	//	}
-	//	]
-	//
-	//	204 — нет ни одного списания.
-	//	401 — пользователь не авторизован.
-	//	500 — внутренняя ошибка сервера.
+	user, ok := store.Get("user")
+	log.Println("user is......", fmt.Sprintf("%v", user))
+	if user == nil || (!ok) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	result, err := h.repo.GetWithdraws(fmt.Sprintf("%v", user), c.Request.Context())
+	//result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
+		return
+	}
+	if len(result) == 0 {
+		c.IndentedJSON(http.StatusNoContent, result)
+		log.Println("len(res) is nil")
+		return
+	}
+	log.Println("WITHDRAWS:")
+	log.Println(result)
+
+	c.JSON(http.StatusOK, result)
+
 }
 func (h *Handler) HandlerGetInfo(c *gin.Context) {
+	locOrder := c.Param("number")
+	result, err := h.repo.GetWithdraws(locOrder, c)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, err)
+		log.Println(err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 	//Формат запроса:
 	//GET /api/orders/{number} HTTP/1.1
 	//Content-Length: 0

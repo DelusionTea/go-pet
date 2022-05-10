@@ -8,6 +8,9 @@ import (
 	"github.com/DelusionTea/go-pet.git/internal/app/middleware"
 	"github.com/DelusionTea/go-pet.git/internal/database"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
+	"github.com/go-session/cookie"
+	"github.com/go-session/session"
+
 
 	"github.com/gin-gonic/gin"
 	"log"
@@ -16,27 +19,26 @@ import (
 	"os/signal"
 )
 
-var secret = []byte("secret")
+var (
+	hashKey = []byte("FF51A553-72FC-478B-9AEF-93D6F506DE91")
+)
 
-func setupRouter(repo handlers.MarketInterface, redis *database.Redis, conf *conf.Config, wp *workers.Workers) *gin.Engine {
-	//client := redis.NewClient(&redis.Options{
-	//	Addr:     "localhost:6379",
-	//	Password: "",
-	//	DB:       0,
-	//})
-	//rdb := redis.NewClient(&redis.Options{
-	//	Addr:     "localhost:6379",
-	//	Password: "", // no password set
-	//	DB:       0,  // use default DB
-	//})
-	//redis.N
 
-	//session.InitManager(
-	//	session.SetStore(redis.NewRedisStore(&redis.Options{
-	//		Addr: "localhost:6379",
-	//		DB:   15, //Что это за строка-то?
-	//	})),
-	//)
+func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
+	session.InitManager(
+		//session.SetStore(redis.NewRedisStore(&redis.Options{
+		//	Addr: conf.RedisAddress,
+		//	DB:   15,
+		//})),
+		session.SetStore(
+			cookie.NewCookieStore(
+				cookie.SetCookieName("demo_cookie_store_id"),
+				cookie.SetHashKey(hashKey),
+			),
+		),
+	)
+
+
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
 
 	router := gin.Default()
@@ -48,7 +50,8 @@ func setupRouter(repo handlers.MarketInterface, redis *database.Redis, conf *con
 	router.Use(middleware.GzipDecodeMiddleware())
 	//router.Use(middleware.CookieMiddleware(conf))
 	//router.Use(gzip.Gzip(gzip.DefaultCompression))
-	handler := handlers.New(repo, conf.ServerAddress, wp)
+	handler := handlers.New(repo, conf.ServerAddress, conf.ServerAddress, wp)
+	//go handler.AccrualAskWorker()
 	router.POST("/api/user/register", handler.HandlerRegister)
 	router.POST("/api/user/login", handler.HandlerLogin)
 	router.POST("/api/user/orders", handler.HandlerPostOrders)
@@ -81,10 +84,7 @@ func main() {
 		wp.Run(ctx)
 	}()
 	//if cfg.DataBase != "" {
-	redis, err := database.NewRedisDatabase(cfg.RedisAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	db, err := sql.Open("postgres", cfg.DataBase)
 	if err != nil {
 		log.Fatal(err)
