@@ -18,6 +18,7 @@ type Config struct {
 	//адрес и порт запуска сервиса: переменная окружения ОС RUN_ADDRESS или флаг -a;
 	//адрес подключения к базе данных: переменная окружения ОС DATABASE_URI или флаг -d;
 	//адрес системы расчёта начислений: переменная окружения ОС ACCRUAL_SYSTEM_ADDRESS или флаг -r.
+
 	ServerAddress    string `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
 	DataBase         string `env:"DATABASE_URI" envDefault:"http://localhost:8080/"`
 	SystemAccrualURL string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"localhost:8081/"`

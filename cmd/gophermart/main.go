@@ -11,6 +11,7 @@ import (
 	"github.com/go-session/cookie"
 	"github.com/go-session/session"
 
+
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 var (
 	hashKey = []byte("FF51A553-72FC-478B-9AEF-93D6F506DE91")
 )
+
 
 func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
 	session.InitManager(
@@ -36,7 +38,9 @@ func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.W
 		),
 	)
 
+
 	/*func setupRouter(repo memory.MemoryMap, baseURL string, conf *conf.Config) *gin.Engine {*/
+
 	router := gin.Default()
 	//router.Use(sessions.Sessions("mysession", sessions.NewCookieStore(secret)))
 	//store := cookie.NewStore([]byte("secret"))
@@ -80,6 +84,7 @@ func main() {
 		wp.Run(ctx)
 	}()
 	//if cfg.DataBase != "" {
+
 	db, err := sql.Open("postgres", cfg.DataBase)
 	if err != nil {
 		log.Fatal(err)
@@ -87,7 +92,7 @@ func main() {
 	defer db.Close()
 	database.SetUpDataBase(db, ctx)
 	log.Println(database.NewDatabaseRepository(db))
-	handler = setupRouter(database.NewDatabase(db), cfg, wp)
+	handler = setupRouter(database.NewDatabase(db), redis, cfg, wp)
 	//	//handler = setupRouter(memory.NewMemoryFile(cfg.FilePath, cfg.BaseURL), cfg.BaseURL, cfg)
 	//} else {
 	//	handler = setupRouter(memory.NewMemoryFile(ctx, cfg.FilePath, cfg.BaseURL), cfg, wp)
