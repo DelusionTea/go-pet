@@ -83,6 +83,9 @@ type GetUserData struct {
 }
 
 func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Context) error {
+	log.Println("Start Update Wallet order:", order)
+
+	log.Println("Find owner of order:")
 	sqlGetUser := `SELECT owner FROM orders WHERE order_temp=$1;`
 	user, err := db.conn.QueryContext(ctx, sqlGetUser, order)
 	if err != nil {
@@ -91,17 +94,17 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 	}
 	result := GetUserData{}
 	user.Scan(&result.login)
-
+	log.Println("Owner is::", &result.login)
+	log.Println("Find current value:")
 	sqlGetWallet := `SELECT current_value FROM wallet WHERE owner=$1;`
 	wallet, err := db.conn.QueryContext(ctx, sqlGetWallet, &result.login)
 	if err != nil {
-		log.Println("err db.conn.QueryContext(ctx, sqlGetUser, status, order)")
+		log.Println("err find cur value", err)
 		return err
 	}
-
 	result2 := GetWalletData{}
 	wallet.Scan(&result2.current)
-	log.Println("&result2.current: ", &result2.current)
+	log.Println("Current value: ", &result2.current)
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
 	s := fmt.Sprintf("%f", result2.current+value)
 	log.Println("s: ", s)
@@ -114,12 +117,14 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 }
 
 func (db *PGDataBase) UpdateStatus(order []byte, status string, ctx context.Context) error {
+	log.Println("Start UpdateStatus order:", order)
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ($2);`
 	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
 	if err != nil {
 		log.Println("err UpdateStatus", err)
 		return err
 	}
+	log.Println("Good End UpdateStatus")
 	return nil
 }
 func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (string, error) {
