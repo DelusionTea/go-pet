@@ -20,7 +20,7 @@ type Config struct {
 	//адрес системы расчёта начислений: переменная окружения ОС ACCRUAL_SYSTEM_ADDRESS или флаг -r.
 	ServerAddress    string `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
 	DataBase         string `env:"DATABASE_URI" envDefault:"http://localhost:8080/"`
-	SystemAccrualURL string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8081/"`
+	SystemAccrualURL string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"localhost:8081/"`
 	NumbWorkers      int    `env:"NUMBER_OF_WORKERS"`
 	WorkerBuff       int    `env:"WORKERS_BUFFER"`
 }

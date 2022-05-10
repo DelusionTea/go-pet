@@ -114,7 +114,7 @@ func (h *Handler) CalculateThings(order string, c *gin.Context) {
 	log.Println("start celculate things order: ", order)
 	//Принять заказ и изменить статус на "в обработке"
 	value := ResponseAccural{}
-	url := h.accuralURL + "/api/orders/" + order
+	url := "http://" + h.accuralURL + "/api/orders/" + order
 	log.Println("URL:")
 	log.Println(url)
 	for (value.Status != "INVALID") || (value.Status != "PROCESSED") {
