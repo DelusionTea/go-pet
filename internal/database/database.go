@@ -9,11 +9,12 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
 	"log"
+	"strconv"
 )
 
 type GetWalletData struct {
-	current    float64
-	withdrawed int
+	current    string
+	withdrawed string
 }
 
 func NewDatabaseRepository(db *sql.DB) handlers.MarketInterface {
@@ -106,7 +107,8 @@ func (db *PGDataBase) UpdateWallet(order []byte, value float64, ctx context.Cont
 	wallet.Scan(&result2.current)
 	log.Println("Current value: ", &result2.current)
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
-	s := fmt.Sprintf("%f", result2.current+value)
+	f, err := strconv.ParseFloat(result2.current, 64)
+	s := fmt.Sprintf("%f", f+value)
 	log.Println("s: ", s)
 	_, err = db.conn.QueryContext(ctx, sqlSetStatus, s, order)
 	if err != nil {
@@ -302,7 +304,8 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 	result := GetWalletData{}
 	query := db.conn.QueryRowContext(ctx, sqlGetWallet, login)
 	err := query.Scan(&result.current, &result.withdrawed) //or how check empty value?
-	if value > result.current {
+	f, err := strconv.ParseFloat(result.current, 64)
+	if value > f {
 		//402 — на счету недостаточно средств;
 		return handlers.NewErrorWithDB(errors.New("402"), "402")
 	}
@@ -315,8 +318,10 @@ func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx co
 		return err
 	}
 	//increase wallet
-	current := result.current - value
-	withdrawed := fmt.Sprintf("%f", float64(result.withdrawed)+value)
+	current := f - value
+
+	f2, err := strconv.ParseFloat(result.withdrawed, 64)
+	withdrawed := fmt.Sprintf("%f", f2+value)
 	log.Println("withdrawed: ", withdrawed)
 	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ($3);`
 	s := fmt.Sprintf("%f", current)
