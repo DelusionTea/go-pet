@@ -296,7 +296,7 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 func (db *PGDataBase) Withdraw(login string, order []byte, value float64, ctx context.Context) error {
 	db.UploadOrder(login, order, ctx)
 
-	sqlGetWallet := `SELECT current_value, withdrawed FROM withdraws WHERE owner=$1;`
+	sqlGetWallet := `SELECT current_value, withdrawed FROM wallet WHERE owner=$1;`
 	result := GetWalletData{}
 	query := db.conn.QueryRowContext(ctx, sqlGetWallet, login)
 	err := query.Scan(&result.current, &result.withdrawed) //or how check empty value?
