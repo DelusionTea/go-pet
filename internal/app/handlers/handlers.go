@@ -313,7 +313,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		log.Println(err.Error())
 		return
 	}
-	go h.AccrualAskWorkerRunner(c)
+
 	return
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
@@ -434,6 +434,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 			log.Println(err)
 			return
 		}
+		go h.AccrualAskWorkerRunner(c)
 
 	}
 	c.IndentedJSON(http.StatusAccepted, "Accepted")
