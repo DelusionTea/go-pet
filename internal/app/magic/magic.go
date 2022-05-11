@@ -62,6 +62,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 		return
 	}
 	defer response.Body.Close()
+	log.Println(response.StatusCode)
 	if response.StatusCode == http.StatusOK {
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
