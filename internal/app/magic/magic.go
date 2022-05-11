@@ -58,18 +58,19 @@ func (h *Handler) AccrualAskWorkerRunner() {
 
 	response, err := http.Get(h.accuralURL + "/api/orders/" + order)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusOK {
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-
+			log.Println(err)
 		}
 
 		var value ResponseonseAccrual
 		if err := json.Unmarshal(body, &value); err != nil {
-
+			log.Println(err)
 		}
 		fmt.Printf("%+v \n", value)
 
