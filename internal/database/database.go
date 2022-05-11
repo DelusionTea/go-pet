@@ -126,6 +126,10 @@ func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Cont
 		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)", err)
 		return err
 	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -143,6 +147,9 @@ func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Cont
 		return err
 	}
 	log.Println("Good End UpdateStatus")
+	if err = tx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
 func (db *PGDataBase) UpdateAccural(order string, accural string, ctx context.Context) error {
@@ -159,6 +166,9 @@ func (db *PGDataBase) UpdateAccural(order string, accural string, ctx context.Co
 		return err
 	}
 	log.Println("Good End UpdateAccural")
+	if err = tx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
 func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (string, error) {
@@ -380,8 +390,10 @@ func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx co
 		log.Println("err sqlUpdateWallet")
 		return err
 	}
-	//402 — на счету недостаточно средств;
-	//422 — неверный номер заказа;
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
