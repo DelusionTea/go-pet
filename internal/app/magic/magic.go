@@ -57,7 +57,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 		log.Println("start celculate things order: ", order)
 
 		//Принять заказ и изменить статус на "в обработке"
-		value := ResponseAccural{}
+		var value ResponseAccural
 		url := "http://" + h.accuralURL + "/api/orders/" + order
 		log.Println("URL:")
 		log.Println(url)
@@ -81,9 +81,9 @@ func (h *Handler) AccrualAskWorkerRunner() {
 
 			err = json.Unmarshal(body, &value)
 			log.Println("body: ", body)
-			log.Println("status is:", &value.Status)
-			log.Println("accrual is:", &value.Accrual)
-			log.Println("order is:", &value.Order)
+			log.Println("status is:", value.Status)
+			log.Println("accrual is:", value.Accrual)
+			log.Println("order is:", value.Order)
 
 			if value.Status == "REGISTERED" {
 				log.Println("UpdateStatus(order, \"REGISTERED\"")
@@ -108,7 +108,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 				log.Println("new float ", *newfloat)
 				newnewfloat := value.Accrual
 				log.Println("new new float ", newnewfloat)
-				err = h.repo.UpdateWallet(order, *newfloat, c)
+				err = h.repo.UpdateWallet(order, value.Accrual, c)
 				if err != nil {
 					//h.repo.UpdateStatus(order, "INVALID", c)
 					log.Println("UpdateWallet err")
