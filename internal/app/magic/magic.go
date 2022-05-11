@@ -3,7 +3,6 @@ package magic
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/DelusionTea/go-pet.git/internal/app/handlers"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"io/ioutil"
@@ -102,8 +101,8 @@ func (h *Handler) AccrualAskWorkerRunner() {
 				return
 			}
 			//Изменить Accural
-			s := fmt.Sprintf("%f", value.Accrual)
-			err = h.repo.UpdateAccural(order, s, c)
+			//s := fmt.Sprintf("%f", value.Accrual)
+			err = h.repo.UpdateAccural(order, value.Accrual, c)
 			log.Println("UpdateAccural")
 			if err != nil {
 				//h.repo.UpdateStatus(order, "INVALID", c)
