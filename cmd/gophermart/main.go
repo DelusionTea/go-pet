@@ -50,7 +50,6 @@ func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.W
 	router.GET("/api/user/balance", handler.HandlerGetBalance)
 	router.POST("/api/user/balance/withdraw", handler.HandlerWithdraw)
 	router.GET("/api/user/balance/withdrawals", handler.HandlerWithdraws)
-	router.GET("/api/orders/:number", handler.HandlerGetInfo)
 
 	router.HandleMethodNotAllowed = true
 
