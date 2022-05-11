@@ -102,7 +102,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 			}
 			//Изменить Accural
 			//s := fmt.Sprintf("%f", value.Accrual)
-			err = h.repo.UpdateAccural(order, value.Accrual, c)
+			err = h.repo.UpdateAccural(order, float32(value.Accrual), c)
 			log.Println("UpdateAccural")
 			if err != nil {
 				//h.repo.UpdateStatus(order, "INVALID", c)
