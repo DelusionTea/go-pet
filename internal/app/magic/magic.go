@@ -3,6 +3,7 @@ package magic
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/DelusionTea/go-pet.git/internal/app/handlers"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"io/ioutil"
@@ -79,7 +80,12 @@ func (h *Handler) AccrualAskWorkerRunner() {
 				return
 			}
 
-			err = json.Unmarshal(body, &value)
+			if err := json.Unmarshal(body, &value); err != nil {
+				log.Println("Server Error Unmarshal")
+				log.Println(err)
+				return
+			}
+			fmt.Printf("%+v \n", value)
 			log.Println("body: ", body)
 			log.Println("status is:", value.Status)
 			log.Println("accrual is:", value.Accrual)
