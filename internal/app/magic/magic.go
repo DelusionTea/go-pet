@@ -35,7 +35,7 @@ func New(repo handlers.MarketInterface, serverAddress string, accrualURL string,
 
 func (h *Handler) AccrualAskWorker() {
 	log.Println("START AccrualAskWorker")
-	c := time.Tick(time.Millisecond)
+	c := time.Tick(time.Second)
 	for range c {
 		go h.AccrualAskWorkerRunner()
 	}
