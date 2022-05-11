@@ -94,7 +94,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 			}
 			//Начислить баллы
 			log.Println("Start Update Wallet")
-			err = h.repo.UpdateWallet(order, value.Accrual, c)
+			err = h.repo.UpdateWallet(order, float32(value.Accrual), c)
 			if err != nil {
 				//h.repo.UpdateStatus(order, "INVALID", c)
 				log.Println("UpdateWallet err")
