@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/DelusionTea/go-pet.git/cmd/conf"
 	"github.com/DelusionTea/go-pet.git/internal/app/handlers"
+	"github.com/DelusionTea/go-pet.git/internal/app/magic"
 	"github.com/DelusionTea/go-pet.git/internal/app/middleware"
 	"github.com/DelusionTea/go-pet.git/internal/database"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
@@ -21,7 +22,12 @@ var (
 	hashKey = []byte("FF51A553-72FC-478B-9AEF-93D6F506DE91")
 )
 
+func setupMagic(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *magic.Handler {
+	magica := magic.New(repo, conf.ServerAddress, conf.ServerAddress, wp)
+	return magica
+}
 func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
+	//handler := handlers.New(handlers.MarketInterface, conf.ServerAddress, conf.ServerAddress, wp)
 	session.InitManager(
 
 		session.SetStore(
@@ -67,11 +73,12 @@ func main() {
 	database.SetUpDataBase(db, ctx)
 	log.Println(database.NewDatabaseRepository(db))
 	handler = setupRouter(database.NewDatabase(db), cfg, wp)
+	magica := setupMagic(database.NewDatabase(db), cfg, wp)
 	server := &http.Server{
 		Addr:    cfg.ServerAddress,
 		Handler: handler,
 	}
-
+	go magica.AccrualAskWorker()
 	go func() {
 		log.Fatal(server.ListenAndServe())
 		cancel()
