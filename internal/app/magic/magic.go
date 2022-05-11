@@ -104,7 +104,11 @@ func (h *Handler) AccrualAskWorkerRunner() {
 
 			if value.Status == "PROCESSED" {
 				log.Println("Start Update Wallet")
-				err = h.repo.UpdateWallet(order, float32(value.Accrual), c)
+				newfloat := &value.Accrual
+				log.Println("new float ", *newfloat)
+				newnewfloat := value.Accrual
+				log.Println("new new float ", newnewfloat)
+				err = h.repo.UpdateWallet(order, *newfloat, c)
 				if err != nil {
 					//h.repo.UpdateStatus(order, "INVALID", c)
 					log.Println("UpdateWallet err")
