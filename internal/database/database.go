@@ -84,12 +84,22 @@ type GetUserData struct {
 	authed   bool
 }
 
+//type Service struct {
+//	db *sql.DB
+//}
+//(db *PGDataBase)
 func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Context) error {
+	// Get a Tx for making transaction requests.
+	tx, err := db.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	log.Println("Start Update Wallet order:", order)
 
 	log.Println("Find owner of order:")
 	sqlGetUser := `SELECT owner FROM orders WHERE order_temp=$1;`
-	user := db.conn.QueryRowContext(ctx, sqlGetUser, order)
+	user := tx.QueryRowContext(ctx, sqlGetUser, order)
 	result := GetUserData{}
 
 	if err := user.Scan(&result.login); err != nil {
@@ -99,7 +109,7 @@ func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Cont
 	log.Println("Owner is::", &result.login)
 	log.Println("Find current value:")
 	sqlGetWallet := `SELECT current_value FROM wallet WHERE owner=$1;`
-	wallet := db.conn.QueryRowContext(ctx, sqlGetWallet, &result.login)
+	wallet := tx.QueryRowContext(ctx, sqlGetWallet, &result.login)
 	result2 := GetWalletData{}
 
 	if err := wallet.Scan(&result2.current); err != nil {
@@ -111,7 +121,7 @@ func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Cont
 	s := fmt.Sprintf("%f", float32(f)+value)
 	log.Println("s: ", s)
 	log.Println("Current value: ", s)
-	_, err = db.conn.QueryContext(ctx, sqlSetStatus, s, order)
+	_, err = tx.ExecContext(ctx, sqlSetStatus, s, order)
 	if err != nil {
 		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)", err)
 		return err
@@ -120,9 +130,14 @@ func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Cont
 }
 
 func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Context) error {
+	tx, err := db.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	log.Println("Start UpdateStatus order:", order)
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ($2);`
-	_, err := db.conn.QueryContext(ctx, sqlSetStatus, status, order)
+	_, err = tx.ExecContext(ctx, sqlSetStatus, status, order)
 	if err != nil {
 		log.Println("err UpdateStatus", err)
 		return err
@@ -131,9 +146,14 @@ func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Cont
 	return nil
 }
 func (db *PGDataBase) UpdateAccural(order string, accural string, ctx context.Context) error {
+	tx, err := db.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	log.Println("Start UpdateStatus order:", order)
 	sqlSetAccural := `UPDATE orders SET accural = ($1) WHERE order_temp = ($2);`
-	_, err := db.conn.QueryContext(ctx, sqlSetAccural, accural, order)
+	_, err = tx.ExecContext(ctx, sqlSetAccural, accural, order)
 	if err != nil {
 		log.Println("err UpdateAccural", err)
 		return err
@@ -324,11 +344,15 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 }
 func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx context.Context) error {
 	db.UploadOrder(login, order, ctx)
-
+	tx, err := db.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	sqlGetWallet := `SELECT current_value, withdrawed FROM wallet WHERE owner=$1;`
 	result := GetWalletData{}
-	query := db.conn.QueryRowContext(ctx, sqlGetWallet, login)
-	err := query.Scan(&result.current, &result.withdrawed) //or how check empty value?
+	query := tx.QueryRowContext(ctx, sqlGetWallet, login)
+	err = query.Scan(&result.current, &result.withdrawed) //or how check empty value?
 	f, err := strconv.ParseFloat(result.current, 64)
 	if value > f {
 		//402 — на счету недостаточно средств;
@@ -337,7 +361,7 @@ func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx co
 	//add this to withdraws.
 	sqlAddWithdraws := `INSERT INTO withdraws (sum_withdrawed, order_temp, owner)
 //				  VALUES ($1, $2, $3)`
-	_, err = db.conn.QueryContext(ctx, sqlAddWithdraws, value, order, login)
+	_, err = tx.ExecContext(ctx, sqlAddWithdraws, value, order, login)
 	if err != nil {
 		log.Println("err sqlAddWithdraws")
 		return err
@@ -350,7 +374,7 @@ func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx co
 	log.Println("withdrawed: ", withdrawed)
 	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ($3);`
 	s := fmt.Sprintf("%f", current)
-	_, err = db.conn.QueryContext(ctx, sqlUpdateWallet, s, withdrawed, login)
+	_, err = tx.ExecContext(ctx, sqlUpdateWallet, s, withdrawed, login)
 
 	if err != nil {
 		log.Println("err sqlUpdateWallet")

@@ -1,7 +1,7 @@
 package luhn
 
 // Valid determines whether the digits in the given string constitute a valid luhn code
-func Valid(s string) bool {
+func IsValid(s string) bool {
 	var n, d, i, m int
 	for i = len(s) - 1; i >= 0; i-- {
 		c := s[i]

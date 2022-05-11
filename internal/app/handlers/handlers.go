@@ -419,7 +419,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 	value.Owner = fmt.Sprintf("%v", user)
 	value.Order = string(body)
 
-	if !luhn.Valid(string(value.Order)) {
+	if !luhn.IsValid(string(value.Order)) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
 		return
 	}
@@ -550,7 +550,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		return
 	}
 
-	if !luhn.Valid(string(value.Order)) {
+	if !luhn.IsValid(string(value.Order)) {
 		c.IndentedJSON(http.StatusUnprocessableEntity, "Order is stupid! It's not real!! AHAHAHAHAHAAHAH")
 		return
 	}
