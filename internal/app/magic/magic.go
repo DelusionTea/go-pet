@@ -70,7 +70,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 			return
 		}
 		defer response.Body.Close()
-		if response.StatusCode == 200 {
+		if response.StatusCode == http.StatusOK {
 			body, err := ioutil.ReadAll(response.Body)
 			if err != nil {
 				//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
