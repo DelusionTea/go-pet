@@ -107,7 +107,7 @@ func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Cont
 	}
 
 	log.Println("Owner is::", &result.login)
-	log.Println("Find current value:")
+	log.Println("Find current value")
 	sqlGetWallet := `SELECT current_value FROM wallet WHERE owner=$1;`
 	wallet := tx.QueryRowContext(ctx, sqlGetWallet, &result.login)
 	result2 := GetWalletData{}
@@ -135,7 +135,7 @@ func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Cont
 		return err
 	}
 	defer tx.Rollback()
-	log.Println("Start UpdateStatus order:", order)
+	log.Println("Start UpdateStatus order:", order, " status: ", status)
 	sqlSetStatus := `UPDATE orders SET status = ($1) WHERE order_temp = ($2);`
 	_, err = tx.ExecContext(ctx, sqlSetStatus, status, order)
 	if err != nil {
@@ -151,7 +151,7 @@ func (db *PGDataBase) UpdateAccural(order string, accural string, ctx context.Co
 		return err
 	}
 	defer tx.Rollback()
-	log.Println("Start UpdateStatus order:", order)
+	log.Println("Start UpdateAccrual order:", order, " accrual: ", accural)
 	sqlSetAccural := `UPDATE orders SET accural = ($1) WHERE order_temp = ($2);`
 	_, err = tx.ExecContext(ctx, sqlSetAccural, accural, order)
 	if err != nil {
