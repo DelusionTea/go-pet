@@ -307,6 +307,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 }
 
 func (h *Handler) HandlerPostOrders(c *gin.Context) {
+	log.Println("Start HandlerPostOrders")
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -368,6 +369,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 }
 
 func (h *Handler) HandlerGetOrders(c *gin.Context) {
+	log.Println("start HandlerGetOrders")
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 
 	if err != nil {
@@ -396,11 +398,12 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 		c.IndentedJSON(http.StatusNoContent, result)
 		return
 	}
-	log.Println(result)
+	log.Println("Result of HandlerGetOrders :", result)
 
 	c.JSON(http.StatusOK, result)
 }
 func (h *Handler) HandlerGetBalance(c *gin.Context) {
+	log.Println("Start HandlerGetBalance")
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -421,7 +424,7 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 		return
 	}
 
-	log.Println(result)
+	log.Println("HandlerGetBalance result:", result)
 
 	c.JSON(http.StatusOK, result)
 
@@ -489,7 +492,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 
 }
 func (h *Handler) HandlerWithdraws(c *gin.Context) {
-	log.Println("End of Handler Withdraws")
+	log.Println("Start of Handler Withdraws")
 	store, err := session.Start(context.Background(), c.Writer, c.Request)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")
@@ -517,6 +520,7 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 		return
 	}
 	log.Println("WITHDRAWS:")
+	log.Println("Result of Handler Withdraws:")
 	log.Println(result)
 
 	c.JSON(http.StatusOK, result)
