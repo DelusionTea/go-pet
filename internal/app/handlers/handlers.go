@@ -24,7 +24,7 @@ type MarketInterface interface {
 	UploadOrder(login string, order string, ctx context.Context) error
 	GetOrder(login string, ctx context.Context) ([]ResponseOrder, error)
 	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
-	Withdraw(login string, order string, value float64, ctx context.Context) error
+	Withdraw(login string, order string, value float32, ctx context.Context) error
 	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
 	UpdateWallet(order string, value float32, ctx context.Context) error
 	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
@@ -41,31 +41,31 @@ type order struct {
 	Owner      string    `json:"login"`
 	Order      string    `json:"order"`
 	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual"`
+	Accrual    float32   `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 type ResponseOrder struct {
 	Order      string    `json:"number"`
 	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual"`
+	Accrual    float32   `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 type ResponseOrderInfo struct {
-	Order   string `json:"number"`
-	Status  string `json:"status"`
-	Accrual int    `json:"accrual"`
+	Order   string  `json:"number"`
+	Status  string  `json:"status"`
+	Accrual float32 `json:"accrual"`
 }
 
 type ResponseWithdraws struct {
 	Order       string    `json:"order"`
-	Sum         int       `json:"sum"`
+	Sum         float32   `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at"`
 }
 type BalanceResponse struct {
-	Current   float64 `json:"current"`
-	Withdrawn int     `json:"withdrawn"`
+	Current   float32 `json:"current"`
+	Withdrawn float32 `json:"withdrawn"`
 }
 
 type Handler struct {
@@ -81,7 +81,7 @@ type DBError struct {
 
 type RequestWithdraw struct {
 	Order string  `json:"order"`
-	Sum   float64 `json:"sum"`
+	Sum   float32 `json:"sum"`
 }
 
 func (err *DBError) Error() string {

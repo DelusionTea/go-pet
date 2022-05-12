@@ -320,7 +320,7 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 			result = append(result, handlers.ResponseOrder{
 				Order:      u.Order,
 				Status:     u.Status,
-				Accrual:    int(intAccrual),
+				Accrual:    float32(intAccrual),
 				UploadedAt: u.UploadedAt,
 			})
 		} else {
@@ -354,7 +354,7 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 
 	return result, nil
 }
-func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx context.Context) error {
+func (db *PGDataBase) Withdraw(login string, order string, value float32, ctx context.Context) error {
 	db.UploadOrder(login, order, ctx)
 	tx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
@@ -365,8 +365,8 @@ func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx co
 	result := GetWalletData{}
 	query := tx.QueryRowContext(ctx, sqlGetWallet, login)
 	err = query.Scan(&result.current, &result.withdrawed) //or how check empty value?
-	f, err := strconv.ParseFloat(result.current, 64)
-	if value > f {
+	f, err := strconv.ParseFloat(result.current, 32)
+	if value > float32(f) {
 		//402 — на счету недостаточно средств;
 		return handlers.NewErrorWithDB(errors.New("402"), "402")
 	}
@@ -379,10 +379,10 @@ func (db *PGDataBase) Withdraw(login string, order string, value float64, ctx co
 		return err
 	}
 	//increase wallet
-	current := f - value
+	current := float32(f) - value
 
-	f2, err := strconv.ParseFloat(result.withdrawed, 64)
-	withdrawed := fmt.Sprintf("%f", f2+value)
+	f2, err := strconv.ParseFloat(result.withdrawed, 32)
+	withdrawed := fmt.Sprintf("%f", float32(f2)+value)
 	log.Println("withdrawed: ", withdrawed)
 	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ($3);`
 	s := fmt.Sprintf("%f", current)
@@ -422,11 +422,11 @@ func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.
 		return result, err
 	}
 	//result = append(result, u)
-	intAccrual, err := strconv.Atoi(u.Accrual)
+	intAccrual, err := strconv.ParseFloat(u.Accrual, 32)
 	result = handlers.ResponseOrderInfo{
 		Order:   u.Order,
 		Status:  u.Status,
-		Accrual: intAccrual,
+		Accrual: float32(intAccrual),
 	}
 
 	return result, nil
@@ -469,7 +469,7 @@ func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handler
 		}
 		result = append(result, handlers.ResponseWithdraws{
 			Order:       u.Order,
-			Sum:         int(intSum),
+			Sum:         float32(intSum),
 			ProcessedAt: u.ProcessedAt,
 		})
 
