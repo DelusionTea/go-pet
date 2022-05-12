@@ -22,7 +22,7 @@ var (
 	hashKey = []byte("FF51A553-72FC-478B-9AEF-93D6F506DE91")
 )
 
-func setupMagic(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *magic.Handler {
+func setupMagic(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *magic.MagicHandler {
 	magica := magic.New(repo, conf.ServerAddress, conf.SystemAccrualURL, wp)
 	return magica
 }

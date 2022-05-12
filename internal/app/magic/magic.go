@@ -12,15 +12,15 @@ import (
 	"time"
 )
 
-type Handler struct {
+type MagicHandler struct {
 	repo          handlers.MarketInterface
 	serverAddress string
 	accuralURL    string
 	wp            workers.Workers
 }
 
-func New(repo handlers.MarketInterface, serverAddress string, accrualURL string, wp *workers.Workers) *Handler {
-	return &Handler{
+func New(repo handlers.MarketInterface, serverAddress string, accrualURL string, wp *workers.Workers) *MagicHandler {
+	return &MagicHandler{
 		repo:          repo,
 		serverAddress: serverAddress,
 		accuralURL:    accrualURL,
@@ -36,7 +36,7 @@ type ResponseonseAccrual struct {
 
 var iteration = 0
 
-func (h *Handler) AccrualAskWorker() {
+func (h *MagicHandler) AccrualAskWorker() {
 
 	c := time.Tick(time.Second)
 	for range c {
@@ -44,7 +44,7 @@ func (h *Handler) AccrualAskWorker() {
 	}
 }
 
-func (h *Handler) AccrualAskWorkerRunner() {
+func (h *MagicHandler) AccrualAskWorkerRunner() {
 
 	log.Println("START AccrualAskWorkerRunner")
 	c := context.Background()
