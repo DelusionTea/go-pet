@@ -372,7 +372,7 @@ func (db *PGDataBase) Withdraw(login string, order string, value float32, ctx co
 	}
 	//add this to withdraws.
 	sqlAddWithdraws := `INSERT INTO withdraws (sum_withdrawed, order_temp, owner)
-//				  VALUES ($1, $2, $3)`
+				  VALUES ($1, $2, $3)`
 
 	withdraw := fmt.Sprintf("%f", value)
 	_, err = tx.ExecContext(ctx, sqlAddWithdraws, withdraw, order, login)
