@@ -373,18 +373,27 @@ func (db *PGDataBase) Withdraw(login string, order string, value float32, ctx co
 	//add this to withdraws.
 	sqlAddWithdraws := `INSERT INTO withdraws (sum_withdrawed, order_temp, owner)
 //				  VALUES ($1, $2, $3)`
-	_, err = tx.ExecContext(ctx, sqlAddWithdraws, value, order, login)
+
+	withdraw := fmt.Sprintf("%f", value)
+	_, err = tx.ExecContext(ctx, sqlAddWithdraws, withdraw, order, login)
 	if err != nil {
 		log.Println("err sqlAddWithdraws")
 		return err
 	}
 	//increase wallet
-	current := float32(f) - value
 
 	f2, err := strconv.ParseFloat(result.withdrawed, 32)
+	if err != nil {
+		log.Println("strconv.ParseFloat(result.withdrawed, 32)")
+		return err
+	}
+
+	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ($3);`
+
 	withdrawed := fmt.Sprintf("%f", float32(f2)+value)
 	log.Println("withdrawed: ", withdrawed)
-	sqlUpdateWallet := `UPDATE wallet SET current_value = ($1), withdrawed = ($2) WHERE owner = ($3);`
+
+	current := float32(f) - value
 	s := fmt.Sprintf("%f", current)
 	_, err = tx.ExecContext(ctx, sqlUpdateWallet, s, withdrawed, login)
 
