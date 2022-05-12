@@ -64,7 +64,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 	res3, err3 := db.ExecContext(ctx, sqlCreateWalletDB)
 	sqlCreateWithdrawsDB := `CREATE TABLE IF NOT EXISTS withdraws (
 								id serial PRIMARY KEY,
-								sum_withdrawed integer ,
+								sum_withdrawed VARCHAR ,
 								order_temp VARCHAR NOT NULL UNIQUE,
 								owner VARCHAR NOT NULL UNIQUE,
 								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
