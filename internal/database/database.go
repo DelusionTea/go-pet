@@ -121,7 +121,7 @@ func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Cont
 	s := fmt.Sprintf("%f", float32(f)+value)
 	log.Println("s: ", s)
 	log.Println("Current value: ", s)
-	_, err = tx.ExecContext(ctx, sqlSetStatus, s, order)
+	_, err = tx.ExecContext(ctx, sqlSetStatus, s, &result.login)
 	if err != nil {
 		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)", err)
 		return err
