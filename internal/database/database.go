@@ -259,29 +259,13 @@ func (db *PGDataBase) UploadOrder(ctx context.Context, login string, order strin
 		log.Println(login)
 		if result.login == login {
 			log.Println("Alredy here")
-			return handlers.NewErrorWithDB(errors.New("alredy here"), "clready here")
+			return handlers.NewErrorWithDB(errors.New("already here"), "already here")
 		}
 		if result.login != login {
 			log.Println("Conflict")
 			return handlers.NewErrorWithDB(errors.New("conflict"), "conflict")
 		}
 
-	}
-
-	if err, ok := err.(*pq.Error); ok {
-		if err.Code == pgerrcode.NoData {
-			log.Println("pgerrcode.NoData")
-
-		}
-		if err.Code == pgerrcode.SuccessfulCompletion {
-			log.Println("pgerrcode.SuccessfulCompletion")
-		}
-		if err.Code == pgerrcode.CaseNotFound {
-			log.Println("pgerrcode.CaseNotFound")
-		}
-
-		log.Println(err)
-		return err
 	}
 
 	sqlAddOrder := `INSERT INTO orders (owner, order_temp,status)
