@@ -56,7 +56,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 		return
 	}
 
-	response, err := http.Get("http://" + h.accuralURL + "/api/orders/" + order)
+	response, err := http.Get(h.accuralURL + "/api/orders/" + order)
 	if err != nil {
 		log.Println(err)
 		return
