@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/DelusionTea/go-pet.git/internal/database/models"
 	"github.com/DelusionTea/go-pet.git/internal/luhn"
 	"github.com/DelusionTea/go-pet.git/internal/workers"
 	"github.com/gin-gonic/gin"
@@ -19,14 +20,13 @@ type MarketInterface interface {
 	UpdateStatus(ctx context.Context, order string, status string) error
 	Register(ctx context.Context, login string, pass string) error
 	Login(ctx context.Context, login string, pass string) (string, error)
-	CheckAuth(ctx context.Context, login string) (string, error)
 	UploadOrder(ctx context.Context, login string, order string) error
-	GetOrder(ctx context.Context, login string) ([]ResponseOrder, error)
-	GetBalance(ctx context.Context, login string) (BalanceResponse, error)
+	GetOrder(ctx context.Context, login string) ([]models.ResponseOrder, error)
+	GetBalance(ctx context.Context, login string) (models.BalanceResponse, error)
 	Withdraw(ctx context.Context, login string, order string, value float32) error
-	GetWithdraws(ctx context.Context, login string) ([]ResponseWithdraws, error)
+	GetWithdraws(ctx context.Context, login string) ([]models.ResponseWithdraws, error)
 	UpdateWallet(ctx context.Context, order string, value float32) error
-	GetOrderInfo(ctx context.Context, order string) (ResponseOrderInfo, error)
+	GetOrderInfo(ctx context.Context, order string) (models.ResponseOrderInfo, error)
 	UpdateAccural(ctx context.Context, order string, accural float32) error
 	GetNewOrder(ctx context.Context) (string, error)
 }
@@ -42,29 +42,6 @@ type order struct {
 	Status     string    `json:"status"`
 	Accrual    float32   `json:"accrual"`
 	UploadedAt time.Time `json:"uploaded_at"`
-}
-
-type ResponseOrder struct {
-	Order      string    `json:"number"`
-	Status     string    `json:"status"`
-	Accrual    float32   `json:"accrual"`
-	UploadedAt time.Time `json:"uploaded_at"`
-}
-
-type ResponseOrderInfo struct {
-	Order   string  `json:"number"`
-	Status  string  `json:"status"`
-	Accrual float32 `json:"accrual"`
-}
-
-type ResponseWithdraws struct {
-	Order       string    `json:"order"`
-	Sum         float32   `json:"sum"`
-	ProcessedAt time.Time `json:"processed_at"`
-}
-type BalanceResponse struct {
-	Current   float32 `json:"current"`
-	Withdrawn float32 `json:"withdrawn"`
 }
 
 type Handler struct {
@@ -102,82 +79,6 @@ func New(repo MarketInterface, serverAddress string, accrualURL string, wp *work
 		wp:            *wp,
 	}
 }
-
-type ResponseAccural struct {
-	Order   string  `json:"order"`
-	Status  string  `json:"status"`
-	Accrual float32 `json:"accrual"`
-}
-
-//func (h *Handler) CalculateThings(order string, c *gin.Context) {
-//	log.Println("START FUCKIG NOT ROUTINE")
-//
-//	log.Println("ORDER OF FUCKIG NOT ROUTINE is ", order)
-//	if order != "" {
-//		log.Println("start celculate things order: ", order)
-//		//Принять заказ и изменить статус на "в обработке"
-//		value := ResponseAccural{}
-//		url := "http://" + h.accuralURL + "/api/orders/" + order
-//		log.Println("URL:")
-//		log.Println(url)
-//		if (value.Status != "INVALID") || (value.Status != "PROCESSED") {
-//			log.Println("(value.Status != \"INVALID\") || (value.Status != \"PROCESSED\")")
-//			response, err := http.Get(url) //
-//			defer response.Body.Close()
-//			body, err := ioutil.ReadAll(response.Body)
-//			if err != nil {
-//				//c.IndentedJSON(http.StatusInternalServerError, "Server Error")
-//				log.Println("Server Error  89")
-//				log.Println(err)
-//				return
-//			}
-//
-//			err = json.Unmarshal(body, &value)
-//			log.Println("body: ", body)
-//			log.Println("status is:", &value.Status)
-//			log.Println("accrual is:", &value.Accrual)
-//			log.Println("order is:", &value.Order)
-//			if value.Status == "PROCESSING" {
-//				h.repo.UpdateStatus(order, "PROCESSING", c)
-//				log.Println("UpdateStatus(order, \"PROCESSING\"")
-//			}
-//		}
-//
-//		if value.Status == "INVALID" {
-//			log.Println("value.Status == \"INVALID\"")
-//			h.repo.UpdateStatus(order, "INVALID", c)
-//			log.Println("UpdateStatus(order, \"INVALID\"")
-//			return
-//		}
-//		//call this thing
-//
-//		//h.repo.UpdateStatus(order, "PROCESSING", c)
-//		//log.Println("UpdateStatus(order, \"PROCESSING\", c)", order)
-//		//log.Println("start Magic")
-//
-//		//Начислить баллы
-//		log.Println("Start Update Wallet")
-//		err := h.repo.UpdateWallet(order, value.Accrual, c)
-//		if err != nil {
-//			h.repo.UpdateStatus(order, "INVALID", c)
-//			log.Println("UpdateStatus(order, \"INVALID\"")
-//			log.Println(err)
-//			return
-//		}
-//		//Изменить статус
-//		s := fmt.Sprintf("%f", value.Accrual)
-//		err = h.repo.UpdateAccural(order, s, c)
-//		log.Println("UpdateAccural")
-//		if err != nil {
-//			h.repo.UpdateStatus(order, "INVALID", c)
-//			log.Println("UpdateStatus(order, \"INVALID\"")
-//			log.Println(err)
-//			return
-//		}
-//		err = h.repo.UpdateStatus(order, "PROCESSED", c)
-//		log.Println("UpdateStatus(order, \"PROCESSED\"")
-//	}
-//}
 
 func (h *Handler) HandlerRegister(c *gin.Context) {
 	log.Println("Register Start")

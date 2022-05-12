@@ -41,6 +41,7 @@ func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.W
 	router := gin.Default()
 	router.Use(middleware.GzipEncodeMiddleware())
 	router.Use(middleware.GzipDecodeMiddleware())
+	//router.Use(middleware.AuthRequired())
 	handler := handlers.New(repo, conf.ServerAddress, conf.ServerAddress, wp)
 	//go handler.AccrualAskWorker()
 	router.POST("/api/user/register", handler.HandlerRegister)

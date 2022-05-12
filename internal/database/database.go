@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/DelusionTea/go-pet.git/internal/app/handlers"
+	"github.com/DelusionTea/go-pet.git/internal/database/models"
 	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
 	"log"
@@ -213,20 +214,6 @@ func (db *PGDataBase) Login(ctx context.Context, login string, pass string) (str
 	//queryauth.Scan(&result.authed)
 	return "Login success", nil
 }
-func (db *PGDataBase) CheckAuth(ctx context.Context, login string) (string, error) {
-	log.Println("Check Auth Start")
-	sqlGetStatus := `SELECT login,is_authed FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
-	result := GetUserData{}
-	query := db.conn.QueryRowContext(ctx, sqlGetStatus, login)
-	query.Scan(&result.login, &result.authed)
-	if result.login == "" {
-		return "", handlers.NewErrorWithDB(errors.New("not found"), "user not found")
-	}
-	if result.authed == false {
-		return "", handlers.NewErrorWithDB(errors.New("not authed"), "user not authed")
-	}
-	return "ok", nil
-}
 func (db *PGDataBase) Register(ctx context.Context, login string, pass string) error {
 	log.Println("Start Register")
 	sqlAddUser := `INSERT INTO users (login, password)
@@ -297,9 +284,9 @@ func (db *PGDataBase) UploadOrder(ctx context.Context, login string, order strin
 
 	return err
 }
-func (db *PGDataBase) GetOrder(ctx context.Context, login string) ([]handlers.ResponseOrder, error) {
+func (db *PGDataBase) GetOrder(ctx context.Context, login string) ([]models.ResponseOrder, error) {
 
-	result := []handlers.ResponseOrder{}
+	result := []models.ResponseOrder{}
 
 	sqlGetOrder := `SELECT order_temp, status, accural, uploaded_at FROM orders WHERE owner=$1;`
 	rows, err := db.conn.QueryContext(ctx, sqlGetOrder, login)
@@ -327,14 +314,14 @@ func (db *PGDataBase) GetOrder(ctx context.Context, login string) ([]handlers.Re
 			return result, err
 		}
 		if u.Accrual != "0" {
-			result = append(result, handlers.ResponseOrder{
+			result = append(result, models.ResponseOrder{
 				Order:      u.Order,
 				Status:     u.Status,
 				Accrual:    float32(intAccrual),
 				UploadedAt: u.UploadedAt,
 			})
 		} else {
-			result = append(result, handlers.ResponseOrder{
+			result = append(result, models.ResponseOrder{
 				Order:      u.Order,
 				Status:     u.Status,
 				UploadedAt: u.UploadedAt,
@@ -344,8 +331,8 @@ func (db *PGDataBase) GetOrder(ctx context.Context, login string) ([]handlers.Re
 	}
 	return result, nil
 }
-func (db *PGDataBase) GetBalance(ctx context.Context, login string) (handlers.BalanceResponse, error) {
-	result := handlers.BalanceResponse{}
+func (db *PGDataBase) GetBalance(ctx context.Context, login string) (models.BalanceResponse, error) {
+	result := models.BalanceResponse{}
 	sqlGetBalance := `SELECT current_value, withdrawed FROM wallet WHERE owner=$1;`
 
 	query := db.conn.QueryRowContext(ctx, sqlGetBalance, login)
@@ -357,7 +344,7 @@ func (db *PGDataBase) GetBalance(ctx context.Context, login string) (handlers.Ba
 		log.Println("empty")
 		return result, handlers.NewErrorWithDB(errors.New("empty"), "empty")
 	}
-	result = handlers.BalanceResponse{
+	result = models.BalanceResponse{
 		Current:   result.Current,
 		Withdrawn: result.Withdrawn,
 	}
@@ -417,8 +404,8 @@ func (db *PGDataBase) Withdraw(ctx context.Context, login string, order string, 
 
 	return nil
 }
-func (db *PGDataBase) GetOrderInfo(ctx context.Context, order string) (handlers.ResponseOrderInfo, error) {
-	result := handlers.ResponseOrderInfo{}
+func (db *PGDataBase) GetOrderInfo(ctx context.Context, order string) (models.ResponseOrderInfo, error) {
+	result := models.ResponseOrderInfo{}
 
 	sqlGetOrder := `SELECT order_temp, status, accural FROM orders WHERE order_temp=($1);`
 	rows := db.conn.QueryRowContext(ctx, sqlGetOrder, order)
@@ -435,7 +422,7 @@ func (db *PGDataBase) GetOrderInfo(ctx context.Context, order string) (handlers.
 	}
 	//result = append(result, u)
 	intAccrual, err := strconv.ParseFloat(u.Accrual, 32)
-	result = handlers.ResponseOrderInfo{
+	result = models.ResponseOrderInfo{
 		Order:   u.Order,
 		Status:  u.Status,
 		Accrual: float32(intAccrual),
@@ -443,8 +430,8 @@ func (db *PGDataBase) GetOrderInfo(ctx context.Context, order string) (handlers.
 
 	return result, nil
 }
-func (db *PGDataBase) GetWithdraws(ctx context.Context, login string) ([]handlers.ResponseWithdraws, error) {
-	result := []handlers.ResponseWithdraws{}
+func (db *PGDataBase) GetWithdraws(ctx context.Context, login string) ([]models.ResponseWithdraws, error) {
+	result := []models.ResponseWithdraws{}
 
 	sqlGetWithdraw := `SELECT order_temp, sum_withdrawed, uploaded_at FROM withdraws WHERE owner=$1;`
 	rows, err := db.conn.QueryContext(ctx, sqlGetWithdraw, login)
@@ -472,7 +459,7 @@ func (db *PGDataBase) GetWithdraws(ctx context.Context, login string) ([]handler
 			log.Println("err  Atoi")
 			return result, err
 		}
-		result = append(result, handlers.ResponseWithdraws{
+		result = append(result, models.ResponseWithdraws{
 			Order:       u.Order,
 			Sum:         float32(intSum),
 			ProcessedAt: u.ProcessedAt,

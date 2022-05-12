@@ -2,8 +2,11 @@ package middleware
 
 import (
 	"compress/gzip"
-	"github.com/gin-gonic/contrib/sessions"
+	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-session/session/v3"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -34,17 +37,25 @@ func GzipEncodeMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
-func AuthRequired(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get("user")
-	if user == nil {
-		// Abort the request with the appropriate error code
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
+func AuthRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		store, err := session.Start(context.Background(), c.Writer, c.Request)
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, "Server Error")
+			log.Println("Server Error 227")
+			log.Println(err)
+			return
+		}
+		user, ok := store.Get("user")
+		log.Println("user is......", fmt.Sprintf("%v", user))
+		if user == nil || (!ok) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+		c.Next()
 	}
-	// Continue down the chain to handler etc
-	c.Next()
 }
+
 func GzipDecodeMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !strings.Contains(c.Request.Header.Get("Content-Encoding"), "gzip") {
