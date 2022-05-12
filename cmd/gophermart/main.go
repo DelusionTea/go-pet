@@ -23,7 +23,7 @@ var (
 )
 
 func setupMagic(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *magic.Handler {
-	magica := magic.New(repo, conf.ServerAddress, conf.ServerAddress, wp)
+	magica := magic.New(repo, conf.ServerAddress, conf.SystemAccrualURL, wp)
 	return magica
 }
 func setupRouter(repo handlers.MarketInterface, conf *conf.Config, wp *workers.Workers) *gin.Engine {
