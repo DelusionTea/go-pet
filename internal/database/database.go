@@ -229,7 +229,7 @@ func (db *PGDataBase) Register(ctx context.Context, login string, pass string) e
 		log.Println("DB REGISTER ERROR HERE")
 		if err.Code == pgerrcode.UniqueViolation {
 			log.Println("UniqueViolation")
-			return handlers.NewErrorWithDB(err, "Conflict")
+			return handlers.NewErrorWithDB(err, "conflict")
 		}
 		log.Println(err)
 	}
@@ -260,11 +260,11 @@ func (db *PGDataBase) UploadOrder(ctx context.Context, login string, order strin
 		log.Println(login)
 		if result.login == login {
 			log.Println("Alredy here")
-			return handlers.NewErrorWithDB(errors.New("Alredy here"), "Already here")
+			return handlers.NewErrorWithDB(errors.New("alredy here"), "clready here")
 		}
 		if result.login != login {
 			log.Println("Conflict")
-			return handlers.NewErrorWithDB(errors.New("Conflict"), "Conflict")
+			return handlers.NewErrorWithDB(errors.New("conflict"), "conflict")
 		}
 
 	}

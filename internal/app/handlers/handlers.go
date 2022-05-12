@@ -118,7 +118,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 	err = h.repo.Register(c, value.Login, value.Password)
 	if err != nil {
 		var ue *DBError
-		if errors.As(err, &ue) && ue.Title == "Conflict" {
+		if errors.As(err, &ue) && ue.Title == "conflict" {
 			c.IndentedJSON(http.StatusConflict, "Status Conflict")
 			log.Println("Conflict  124")
 			return
@@ -243,12 +243,12 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 
 	if err != nil {
 		var ue *DBError
-		if errors.As(err, &ue) && (ue.Title == "Already here") {
+		if errors.As(err, &ue) && (ue.Title == "already here") {
 			c.IndentedJSON(http.StatusOK, "Already here")
 			log.Println("Already here")
 			return
 		}
-		if errors.As(err, &ue) && (ue.Title == "Conflict") {
+		if errors.As(err, &ue) && (ue.Title == "conflict") {
 			c.IndentedJSON(http.StatusConflict, "Conflict")
 			log.Println("Conflict")
 			return
