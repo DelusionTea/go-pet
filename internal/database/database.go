@@ -59,7 +59,7 @@ func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 								accural VARCHAR DEFAULT '0',
 								uploaded_at DATE NOT NULL DEFAULT CURRENT_DATE
 					);`
-	//SELECT order_temp, status, accural, uploadet_at FROM orders WHERE owner=$1
+
 	res2, err2 := db.ExecContext(ctx, sqlCreateOrdersDB)
 	log.Println("Create second TABLE")
 	sqlCreateWalletDB := `CREATE TABLE IF NOT EXISTS wallet (
@@ -252,7 +252,6 @@ func (db *PGDataBase) UploadOrder(ctx context.Context, login string, order strin
 	err := query.Scan(&result.login) //or how check empty value?
 	if err != nil {
 		log.Println(err)
-		return err
 	}
 	if result.login != "" {
 		log.Println("DB ERROR OF UPLOAD ORDER")
