@@ -87,13 +87,13 @@ func (h *Handler) AccrualAskWorkerRunner() {
 		}
 		if value.Status == "PROCESSING" {
 			log.Println("UpdateStatus(order, \"PROCESSING\"")
-			h.repo.UpdateStatus(order, "PROCESSING", c)
+			h.repo.UpdateStatus(c, order, "PROCESSING")
 			return
 		}
 
 		if value.Status == "INVALID" {
 			log.Println("value.Status == \"INVALID\"")
-			h.repo.UpdateStatus(order, "INVALID", c)
+			h.repo.UpdateStatus(c, order, "INVALID")
 			log.Println("UpdateStatus(order, \"INVALID\"")
 			return
 		}
@@ -104,7 +104,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 			log.Println("new float ", *newfloat)
 			newnewfloat := value.Accrual
 			log.Println("new new float ", newnewfloat)
-			err = h.repo.UpdateWallet(order, value.Accrual, c)
+			err = h.repo.UpdateWallet(c, order, value.Accrual)
 			if err != nil {
 				//h.repo.UpdateStatus(order, "INVALID", c)
 				log.Println("UpdateWallet err")
@@ -113,7 +113,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 			}
 			//Изменить Accural
 			//s := fmt.Sprintf("%f", value.Accrual)
-			err = h.repo.UpdateAccural(order, float32(value.Accrual), c)
+			err = h.repo.UpdateAccural(c, order, float32(value.Accrual))
 			log.Println("UpdateAccural")
 			if err != nil {
 				//h.repo.UpdateStatus(order, "INVALID", c)
@@ -122,7 +122,7 @@ func (h *Handler) AccrualAskWorkerRunner() {
 				return
 			}
 			log.Println("UpdateStatus(order, \"PROCESSED\"")
-			err = h.repo.UpdateStatus(order, "PROCESSED", c)
+			err = h.repo.UpdateStatus(c, order, "PROCESSED")
 			if err != nil {
 				//h.repo.UpdateStatus(order, "INVALID", c)
 				log.Println("\"UpdateStatus\" err")
