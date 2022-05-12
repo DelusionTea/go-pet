@@ -15,20 +15,19 @@ import (
 	"time"
 )
 
-//const userkey = "user"
 type MarketInterface interface {
-	UpdateStatus(order string, status string, ctx context.Context) error
-	Register(login string, pass string, ctx context.Context) error
-	Login(login string, pass string, ctx context.Context) (string, error)
-	CheckAuth(login string, ctx context.Context) (string, error)
-	UploadOrder(login string, order string, ctx context.Context) error
-	GetOrder(login string, ctx context.Context) ([]ResponseOrder, error)
-	GetBalance(login string, ctx context.Context) (BalanceResponse, error)
-	Withdraw(login string, order string, value float32, ctx context.Context) error
-	GetWithdraws(login string, ctx context.Context) ([]ResponseWithdraws, error)
-	UpdateWallet(order string, value float32, ctx context.Context) error
-	GetOrderInfo(order string, ctx context.Context) (ResponseOrderInfo, error)
-	UpdateAccural(order string, accural float32, ctx context.Context) error
+	UpdateStatus(ctx context.Context, order string, status string) error
+	Register(ctx context.Context, login string, pass string) error
+	Login(ctx context.Context, login string, pass string) (string, error)
+	CheckAuth(ctx context.Context, login string) (string, error)
+	UploadOrder(ctx context.Context, login string, order string) error
+	GetOrder(ctx context.Context, login string) ([]ResponseOrder, error)
+	GetBalance(ctx context.Context, login string) (BalanceResponse, error)
+	Withdraw(ctx context.Context, login string, order string, value float32) error
+	GetWithdraws(ctx context.Context, login string) ([]ResponseWithdraws, error)
+	UpdateWallet(ctx context.Context, order string, value float32) error
+	GetOrderInfo(ctx context.Context, order string) (ResponseOrderInfo, error)
+	UpdateAccural(ctx context.Context, order string, accural float32) error
 	GetNewOrder(ctx context.Context) (string, error)
 }
 type user struct {
@@ -215,7 +214,7 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		log.Println(err)
 		return
 	}
-	err = h.repo.Register(value.Login, value.Password, c)
+	err = h.repo.Register(c, value.Login, value.Password)
 	if err != nil {
 		var ue *DBError
 		if errors.As(err, &ue) && ue.Title == "Conflict" {
@@ -277,7 +276,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		log.Println("Bad Request Error 186  Login:", value.Login, "  Passwprd:  ", value.Password)
 		return
 	}
-	results, err := h.repo.Login(value.Login, value.Password, c)
+	results, err := h.repo.Login(c, value.Login, value.Password)
 	//
 	if err != nil {
 		var ue *DBError
@@ -340,7 +339,7 @@ func (h *Handler) HandlerPostOrders(c *gin.Context) {
 		return
 	}
 
-	err = h.repo.UploadOrder(value.Owner, value.Order, c)
+	err = h.repo.UploadOrder(c, value.Owner, value.Order)
 
 	if err != nil {
 		var ue *DBError
@@ -388,7 +387,7 @@ func (h *Handler) HandlerGetOrders(c *gin.Context) {
 
 	}
 
-	result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
+	result, err := h.repo.GetOrder(c, fmt.Sprintf("%v", user))
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)
 		log.Println(err)
@@ -417,7 +416,7 @@ func (h *Handler) HandlerGetBalance(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
-	result, err := h.repo.GetBalance(fmt.Sprintf("%v", user), c.Request.Context())
+	result, err := h.repo.GetBalance(c, fmt.Sprintf("%v", user))
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)
 		log.Println(err)
@@ -472,7 +471,7 @@ func (h *Handler) HandlerWithdraw(c *gin.Context) {
 		return
 	}
 	log.Println("call db Withdraw")
-	err = h.repo.Withdraw(fmt.Sprintf("%v", user), string(value.Order), value.Sum, c)
+	err = h.repo.Withdraw(c, fmt.Sprintf("%v", user), string(value.Order), value.Sum)
 
 	if err != nil {
 		var ue *DBError
@@ -507,7 +506,7 @@ func (h *Handler) HandlerWithdraws(c *gin.Context) {
 		return
 	}
 
-	result, err := h.repo.GetWithdraws(fmt.Sprintf("%v", user), c.Request.Context())
+	result, err := h.repo.GetWithdraws(c, fmt.Sprintf("%v", user))
 	//result, err := h.repo.GetOrder(fmt.Sprintf("%v", user), c.Request.Context())
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, err)

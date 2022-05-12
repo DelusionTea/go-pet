@@ -21,6 +21,12 @@ type GetWalletData struct {
 func NewDatabaseRepository(db *sql.DB) handlers.MarketInterface {
 	return handlers.MarketInterface(NewDatabase(db))
 }
+func NewDatabase(db *sql.DB) *PGDataBase {
+	result := &PGDataBase{
+		conn: db,
+	}
+	return result
+}
 
 func SetUpDataBase(db *sql.DB, ctx context.Context) error {
 
@@ -84,11 +90,26 @@ type GetUserData struct {
 	authed   bool
 }
 
-//type Service struct {
-//	db *sql.DB
-//}
-//(db *PGDataBase)
-func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Context) error {
+type RespOrder struct {
+	Order      string
+	Status     string
+	Accrual    string
+	UploadedAt time.Time
+}
+
+type OrderInfoString struct {
+	Order   string
+	Status  string
+	Accrual string
+}
+
+type ResponseWithdrawsLocal struct {
+	Order       string
+	Sum         string
+	ProcessedAt time.Time
+}
+
+func (db *PGDataBase) UpdateWallet(ctx context.Context, order string, value float32) error {
 	// Get a Tx for making transaction requests.
 	tx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
@@ -132,8 +153,7 @@ func (db *PGDataBase) UpdateWallet(order string, value float32, ctx context.Cont
 
 	return nil
 }
-
-func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Context) error {
+func (db *PGDataBase) UpdateStatus(ctx context.Context, order string, status string) error {
 	tx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -152,7 +172,7 @@ func (db *PGDataBase) UpdateStatus(order string, status string, ctx context.Cont
 	}
 	return nil
 }
-func (db *PGDataBase) UpdateAccural(order string, accural float32, ctx context.Context) error {
+func (db *PGDataBase) UpdateAccural(ctx context.Context, order string, accural float32) error {
 	tx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -173,7 +193,7 @@ func (db *PGDataBase) UpdateAccural(order string, accural float32, ctx context.C
 	}
 	return nil
 }
-func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (string, error) {
+func (db *PGDataBase) Login(ctx context.Context, login string, pass string) (string, error) {
 	log.Println("Start Login")
 	sqlGetUser := `SELECT login,password FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
 	query := db.conn.QueryRowContext(ctx, sqlGetUser, login)
@@ -193,8 +213,7 @@ func (db *PGDataBase) Login(login string, pass string, ctx context.Context) (str
 	//queryauth.Scan(&result.authed)
 	return "Login success", nil
 }
-
-func (db *PGDataBase) CheckAuth(login string, ctx context.Context) (string, error) {
+func (db *PGDataBase) CheckAuth(ctx context.Context, login string) (string, error) {
 	log.Println("Check Auth Start")
 	sqlGetStatus := `SELECT login,is_authed FROM users WHERE login=$1 FETCH FIRST ROW ONLY;`
 	result := GetUserData{}
@@ -208,8 +227,7 @@ func (db *PGDataBase) CheckAuth(login string, ctx context.Context) (string, erro
 	}
 	return "ok", nil
 }
-
-func (db *PGDataBase) Register(login string, pass string, ctx context.Context) error {
+func (db *PGDataBase) Register(ctx context.Context, login string, pass string) error {
 	log.Println("Start Register")
 	sqlAddUser := `INSERT INTO users (login, password)
 				  VALUES ($1, $2)`
@@ -235,7 +253,7 @@ func (db *PGDataBase) Register(login string, pass string, ctx context.Context) e
 	log.Println("err is nil")
 	return err
 }
-func (db *PGDataBase) UploadOrder(login string, order string, ctx context.Context) error {
+func (db *PGDataBase) UploadOrder(ctx context.Context, login string, order string) error {
 	sqlCheckOrder := `SELECT owner FROM orders WHERE order_temp=$1 FETCH FIRST ROW ONLY;`
 
 	result := GetUserData{}
@@ -279,15 +297,7 @@ func (db *PGDataBase) UploadOrder(login string, order string, ctx context.Contex
 
 	return err
 }
-
-type RespOrder struct {
-	Order      string
-	Status     string
-	Accrual    string
-	UploadedAt time.Time
-}
-
-func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.ResponseOrder, error) {
+func (db *PGDataBase) GetOrder(ctx context.Context, login string) ([]handlers.ResponseOrder, error) {
 
 	result := []handlers.ResponseOrder{}
 
@@ -334,7 +344,7 @@ func (db *PGDataBase) GetOrder(login string, ctx context.Context) ([]handlers.Re
 	}
 	return result, nil
 }
-func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.BalanceResponse, error) {
+func (db *PGDataBase) GetBalance(ctx context.Context, login string) (handlers.BalanceResponse, error) {
 	result := handlers.BalanceResponse{}
 	sqlGetBalance := `SELECT current_value, withdrawed FROM wallet WHERE owner=$1;`
 
@@ -354,8 +364,8 @@ func (db *PGDataBase) GetBalance(login string, ctx context.Context) (handlers.Ba
 
 	return result, nil
 }
-func (db *PGDataBase) Withdraw(login string, order string, value float32, ctx context.Context) error {
-	db.UploadOrder(login, order, ctx)
+func (db *PGDataBase) Withdraw(ctx context.Context, login string, order string, value float32) error {
+	db.UploadOrder(ctx, order, login)
 	tx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -407,14 +417,7 @@ func (db *PGDataBase) Withdraw(login string, order string, value float32, ctx co
 
 	return nil
 }
-
-type OrderInfoString struct {
-	Order   string
-	Status  string
-	Accrual string
-}
-
-func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.ResponseOrderInfo, error) {
+func (db *PGDataBase) GetOrderInfo(ctx context.Context, order string) (handlers.ResponseOrderInfo, error) {
 	result := handlers.ResponseOrderInfo{}
 
 	sqlGetOrder := `SELECT order_temp, status, accural FROM orders WHERE order_temp=($1);`
@@ -440,14 +443,7 @@ func (db *PGDataBase) GetOrderInfo(order string, ctx context.Context) (handlers.
 
 	return result, nil
 }
-
-type ResponseWithdrawsLocal struct {
-	Order       string
-	Sum         string
-	ProcessedAt time.Time
-}
-
-func (db *PGDataBase) GetWithdraws(login string, ctx context.Context) ([]handlers.ResponseWithdraws, error) {
+func (db *PGDataBase) GetWithdraws(ctx context.Context, login string) ([]handlers.ResponseWithdraws, error) {
 	result := []handlers.ResponseWithdraws{}
 
 	sqlGetWithdraw := `SELECT order_temp, sum_withdrawed, uploaded_at FROM withdraws WHERE owner=$1;`
@@ -496,158 +492,3 @@ func (db *PGDataBase) GetNewOrder(ctx context.Context) (string, error) {
 	log.Println("GetNewOrder: Order: ", order)
 	return order, nil
 }
-func NewDatabase(db *sql.DB) *PGDataBase {
-	result := &PGDataBase{
-		conn: db,
-	}
-	return result
-}
-
-func (db *PGDataBase) Ping(ctx context.Context) error {
-
-	err := db.conn.PingContext(ctx)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	return nil
-}
-
-//func NewDatabaseRepository(baseURL string, db *sql.DB) handlers.ShorterInterface {
-//	return handlers.ShorterInterface(NewDatabase(baseURL, db))
-//}
-
-//func (db *PGDataBase) AddURL(ctx context.Context, longURL string, shortURL string, user string) error {
-//
-//	sqlAddRow := `INSERT INTO urls (user_id, origin_url, short_url)
-//				  VALUES ($1, $2, $3)`
-//
-//	_, err := db.conn.ExecContext(ctx, sqlAddRow, user, longURL, shortURL)
-//
-//	if err, ok := err.(*pq.Error); ok {
-//		//if err.Code == pgerrcode.UniqueViolation {
-//		//	return handlers.NewErrorWithDB(err, "UniqConstraint")
-//		//}
-//		log.Println(err)
-//	}
-//
-//	return err
-//}
-
-//func (db *PGDataBase) GetURL(ctx context.Context, shortURL string) (string, error) {
-//
-//	sqlGetURLRow := `SELECT origin_url, is_deleted FROM urls WHERE short_url=$1 FETCH FIRST ROW ONLY;`
-//	query := db.conn.QueryRowContext(ctx, sqlGetURLRow, shortURL)
-//	result := GetURLdata{}
-//	query.Scan(&result.OriginURL, &result.IsDeleted)
-//	//if result.OriginURL == "" {
-//	//	return "", handlers.NewErrorWithDB(errors.New("not found"), "Not found")
-//	//}
-//	//if result.IsDeleted {
-//	//	return "", handlers.NewErrorWithDB(errors.New("Deleted"), "Deleted")
-//	//}
-//	return result.OriginURL, nil
-//}
-
-//func (db *PGDataBase) GetUserURL(ctx context.Context, user string) ([]handlers.ResponseGetURL, error) {
-//
-//	result := []handlers.ResponseGetURL{}
-//
-//	sqlGetUserURL := `SELECT origin_url, short_url FROM urls WHERE user_id=$1 AND is_deleted=false;`
-//	rows, err := db.conn.QueryContext(ctx, sqlGetUserURL, user)
-//	if err != nil {
-//		return result, err
-//	}
-//	if rows.Err() != nil {
-//		return result, rows.Err()
-//	}
-//	defer rows.Close()
-//
-//	for rows.Next() {
-//		var u handlers.ResponseGetURL
-//		err = rows.Scan(&u.OriginalURL, &u.ShortURL)
-//		if err != nil {
-//			return result, err
-//		}
-//		u.ShortURL = db.baseURL + u.ShortURL
-//		result = append(result, u)
-//	}
-//
-//	return result, nil
-//}
-
-//func (db *PGDataBase) AddURLs(ctx context.Context, urls []handlers.ManyPostURL, user string) ([]handlers.ManyPostResponse, error) {
-//
-//	result := []handlers.ManyPostResponse{}
-//	tx, err := db.conn.Begin()
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	defer tx.Rollback()
-//
-//	stmt, err := tx.PrepareContext(ctx, `INSERT INTO urls (user_id, origin_url, short_url) VALUES ($1, $2, $3)`)
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	defer stmt.Close()
-//
-//	for _, u := range urls {
-//		shortURL := shorter.Shorter(u.OriginalURL)
-//		if _, err = stmt.ExecContext(ctx, user, u.OriginalURL, shortURL); err != nil {
-//			return nil, err
-//		}
-//		result = append(result, handlers.ManyPostResponse{
-//			CorrelationID: u.CorrelationID,
-//			ShortURL:      db.baseURL + shortURL,
-//		})
-//	}
-//
-//	if err != nil {
-//		return nil, err
-//	}
-//	tx.Commit()
-//	return result, nil
-//}
-
-//func (db *PGDataBase) DeleteManyURL(ctx context.Context, urls []string, user string) error {
-//
-//	sql := `UPDATE urls SET is_deleted = true WHERE short_url = ANY ($1);`
-//	urlsToDelete := []string{}
-//	for _, url := range urls {
-//		if db.isOwner(ctx, url, user) {
-//			urlsToDelete = append(urlsToDelete, url)
-//		}
-//	}
-//	_, err := db.conn.ExecContext(ctx, sql, pq.Array(urlsToDelete))
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}
-//
-//func (db *PGDataBase) isOwner(ctx context.Context, url string, user string) bool {
-//	sqlGetURLRow := `SELECT user_id FROM urls WHERE short_url=$1 FETCH FIRST ROW ONLY;`
-//	query := db.conn.QueryRowContext(ctx, sqlGetURLRow, url)
-//	result := ""
-//	query.Scan(&result)
-//	return result == user
-//}
-
-//func (db *PGDataBase) DeleteURLs(ctx context.Context, urls []string, user string) error {
-//	sql := `UPDATE urls SET is_deleted = true WHERE short_url = ANY ($1);`
-//	urlsToDelete := []string{}
-//	for _, url := range urls {
-//		if db.isOwner(ctx, url, user) {
-//			urlsToDelete = append(urlsToDelete, url)
-//		}
-//	}
-//	_, err := db.conn.ExecContext(ctx, sql, pq.Array(urlsToDelete))
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}
