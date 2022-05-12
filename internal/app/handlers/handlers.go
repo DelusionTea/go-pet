@@ -138,7 +138,6 @@ func (h *Handler) HandlerRegister(c *gin.Context) {
 		return
 	}
 
-	return
 }
 func (h *Handler) HandlerLogin(c *gin.Context) {
 	log.Println("Login Start")
@@ -161,7 +160,7 @@ func (h *Handler) HandlerLogin(c *gin.Context) {
 		return
 	}
 
-	json.Unmarshal(body, &value)
+	err = json.Unmarshal(body, &value)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, "Server Error")

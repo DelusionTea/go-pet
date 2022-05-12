@@ -140,6 +140,10 @@ func (db *PGDataBase) UpdateWallet(ctx context.Context, order string, value floa
 
 	sqlSetStatus := `UPDATE wallet SET current_value = ($1) WHERE owner = ($2);`
 	f, err := strconv.ParseFloat(result2.current, 32)
+	if err != nil {
+		log.Println("err db.conn.QueryContext(ctx, sqlSetStatus, status, order)", err)
+		return err
+	}
 	s := fmt.Sprintf("%f", float32(f)+value)
 	log.Println("s: ", s)
 	log.Println("Current value: ", s)
@@ -246,6 +250,10 @@ func (db *PGDataBase) UploadOrder(ctx context.Context, login string, order strin
 	result := GetUserData{}
 	query := db.conn.QueryRowContext(ctx, sqlCheckOrder, order)
 	err := query.Scan(&result.login) //or how check empty value?
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	if result.login != "" {
 		log.Println("DB ERROR OF UPLOAD ORDER")
 		log.Println(result.login)
@@ -361,8 +369,16 @@ func (db *PGDataBase) Withdraw(ctx context.Context, login string, order string, 
 	sqlGetWallet := `SELECT current_value, withdrawed FROM wallet WHERE owner=$1;`
 	result := GetWalletData{}
 	query := tx.QueryRowContext(ctx, sqlGetWallet, login)
-	err = query.Scan(&result.current, &result.withdrawed) //or how check empty value?
+	err = query.Scan(&result.current, &result.withdrawed)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	f, err := strconv.ParseFloat(result.current, 32)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	if value > float32(f) {
 		//402 — на счету недостаточно средств;
 		return handlers.NewErrorWithDB(errors.New("402"), "402")
@@ -422,6 +438,10 @@ func (db *PGDataBase) GetOrderInfo(ctx context.Context, order string) (models.Re
 	}
 	//result = append(result, u)
 	intAccrual, err := strconv.ParseFloat(u.Accrual, 32)
+	if err != nil {
+		log.Println(err)
+		return result, err
+	}
 	result = models.ResponseOrderInfo{
 		Order:   u.Order,
 		Status:  u.Status,
